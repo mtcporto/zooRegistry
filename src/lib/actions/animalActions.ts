@@ -7,6 +7,7 @@ import type { Animal } from "@/types";
 import { getClassById } from "./classeActions";
 import { getOrdemById } from "./ordemActions";
 import { getFamiliaById } from "./familiaActions";
+import { getConservationStatus } from "@/ai/flows/get-conservation-status-flow";
 
 export async function getAnimais(): Promise<Animal[]> {
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -48,7 +49,7 @@ export async function addAnimal(formData: FormData): Promise<{ success: boolean;
   const familiaId = formData.get("f_familiaId") as string;
   const nomesAlternativos = formData.get("f_nomes_alternativos") as string | undefined;
   const imagem = formData.get("f_imagem") as string | undefined;
-  const statusConservacao = formData.get("f_status_conservacao") as string | undefined;
+  let statusConservacao = formData.get("f_status_conservacao") as string | undefined;
 
   if (!nomeCientifico) return { success: false, message: "Nome científico é obrigatório." };
   if (!nomeVulgar) return { success: false, message: "Nome vulgar é obrigatório." };
@@ -59,6 +60,20 @@ export async function addAnimal(formData: FormData): Promise<{ success: boolean;
   if (!await getClassById(classeId)) return { success: false, message: "Classe selecionada inválida." };
   if (!await getOrdemById(ordemId)) return { success: false, message: "Ordem selecionada inválida." };
   if (!await getFamiliaById(familiaId)) return { success: false, message: "Família selecionada inválida." };
+
+  if (!statusConservacao && nomeCientifico) {
+    try {
+      const iucnResult = await getConservationStatus({ scientificName: nomeCientifico });
+      if (iucnResult.status) {
+        statusConservacao = iucnResult.status;
+      } else if (iucnResult.errorMessage) {
+        console.log(`IUCN status for ${nomeCientifico}: ${iucnResult.errorMessage}`);
+      }
+    } catch (e) {
+        console.error(`Error fetching IUCN status for ${nomeCientifico}:`, e);
+    }
+  }
+
 
   const newAnimal: Animal = {
     id: generateId(),
@@ -79,6 +94,7 @@ export async function addAnimal(formData: FormData): Promise<{ success: boolean;
   revalidatePath(`/classes/${classeId}`);
   revalidatePath(`/ordens/${ordemId}`);
   revalidatePath(`/familias/${familiaId}`);
+  revalidatePath("/"); // Revalidate home page if it lists animals
 
   return { success: true, message: "Animal (espécie) adicionado com sucesso!", data: newAnimal };
 }
@@ -91,7 +107,7 @@ export async function updateAnimal(id: string, formData: FormData): Promise<{ su
   const familiaId = formData.get("f_familiaId") as string;
   const nomesAlternativos = formData.get("f_nomes_alternativos") as string | undefined;
   const imagem = formData.get("f_imagem") as string | undefined;
-  const statusConservacao = formData.get("f_status_conservacao") as string | undefined;
+  let statusConservacao = formData.get("f_status_conservacao") as string | undefined;
 
   if (!nomeCientifico) return { success: false, message: "Nome científico é obrigatório." };
   if (!nomeVulgar) return { success: false, message: "Nome vulgar é obrigatório." };
@@ -109,6 +125,33 @@ export async function updateAnimal(id: string, formData: FormData): Promise<{ su
   }
   
   const animalOriginal = db.animais[animalIndex];
+
+  // Fetch from IUCN only if status is not provided and scientific name is present
+  if (!statusConservacao && nomeCientifico) {
+     try {
+      const iucnResult = await getConservationStatus({ scientificName: nomeCientifico });
+      if (iucnResult.status) {
+        statusConservacao = iucnResult.status;
+      } else if (iucnResult.errorMessage) {
+         console.log(`IUCN status for ${nomeCientifico}: ${iucnResult.errorMessage}`);
+         // Keep original status if API call fails but user didn't clear it
+         if (formData.has("f_status_conservacao") && !formData.get("f_status_conservacao")) {
+            // Field was explicitly emptied by user
+            statusConservacao = undefined;
+         } else if (!formData.has("f_status_conservacao")){
+            // Field was not in form, means we should try to fetch, but failed
+            statusConservacao = animalOriginal.f_status_conservacao; // keep original if fetch fails and field wasn't touched
+         } else {
+            // Field was in form but empty, and API failed
+            statusConservacao = undefined;
+         }
+      }
+    } catch (e) {
+        console.error(`Error fetching IUCN status for ${nomeCientifico}:`, e);
+        statusConservacao = animalOriginal.f_status_conservacao; // keep original on error
+    }
+  }
+
 
   const updatedAnimal: Animal = {
     ...animalOriginal,
@@ -132,6 +175,7 @@ export async function updateAnimal(id: string, formData: FormData): Promise<{ su
   revalidatePath(`/classes/${classeId}`);
   revalidatePath(`/ordens/${ordemId}`);
   revalidatePath(`/familias/${familiaId}`);
+  revalidatePath("/"); // Revalidate home page if it lists animals
 
   if (animalOriginal.f_classeId !== classeId) revalidatePath(`/classes/${animalOriginal.f_classeId}`);
   if (animalOriginal.f_ordemId !== ordemId) revalidatePath(`/ordens/${animalOriginal.f_ordemId}`);
@@ -160,6 +204,8 @@ export async function deleteAnimal(id: string): Promise<{ success: boolean; mess
   revalidatePath(`/classes/${animalToDelete.f_classeId}`);
   revalidatePath(`/ordens/${animalToDelete.f_ordemId}`);
   revalidatePath(`/familias/${animalToDelete.f_familiaId}`);
+  revalidatePath("/"); // Revalidate home page if it lists animals
   
   return { success: true, message: "Animal (espécie) excluído com sucesso!" };
 }
+
