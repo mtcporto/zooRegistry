@@ -35,7 +35,7 @@ export default async function HomePage() {
                     alt={animal.f_nome || 'Imagem do animal'}
                     fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    className="object-cover"
+                    className="object-contain" // Alterado de object-cover para object-contain
                     data-ai-hint={imageHint}
                   />
                 </div>
@@ -67,7 +67,7 @@ export default async function HomePage() {
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex justify-end gap-2">
                   <Button variant="outline" size="sm" asChild title="Ver Detalhes da Espécie">
-                    <Link href={`/animais/${animal.id}`}><Eye className="mr-1 h-4 w-4" /> Ver Detalhes</Link>
+                    <Link href={`/animais/${animal.id}?view=public`}><Eye className="mr-1 h-4 w-4" /> Ver Detalhes</Link>
                   </Button>
                 </CardFooter>
               </Card>

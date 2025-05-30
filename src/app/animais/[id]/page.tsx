@@ -8,10 +8,16 @@ import Image from "next/image";
 import { ArrowLeft, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-export const dynamic = 'force-dynamic'; // Ensure dynamic rendering for params access
+export const dynamic = 'force-dynamic';
 
-export default async function AnimalDetailPage({ params }: { params: { id: string } }) {
+interface AnimalDetailPageProps {
+  params: { id: string };
+  searchParams?: { [key: string]: string | string[] | undefined };
+}
+
+export default async function AnimalDetailPage({ params, searchParams }: AnimalDetailPageProps) {
   const animal = await getAnimalById(params.id);
+  const isPublicView = searchParams?.view === 'public';
 
   if (!animal) {
     return (
@@ -105,18 +111,20 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
              <Badge variant="secondary">ID da Espécie: {animal.id}</Badge>
            </div>
         </CardContent>
-        <CardFooter className="flex justify-between items-center border-t mt-4 pt-4">
-          <Button variant="outline" asChild>
-            <Link href={`/animais/${animal.id}/editar`}>
-              <Edit className="mr-2 h-4 w-4" /> Editar Espécie
-            </Link>
-          </Button>
-          <Button asChild>
-            <Link href={`/cadastros/novo?animalId=${animal.id}&animalNome=${encodeURIComponent(animal.f_nome)}`}>
-              Registrar Indivíduo desta Espécie
-            </Link>
-          </Button>
-        </CardFooter>
+        {!isPublicView && (
+          <CardFooter className="flex justify-between items-center border-t mt-4 pt-4">
+            <Button variant="outline" asChild>
+              <Link href={`/animais/${animal.id}/editar`}>
+                <Edit className="mr-2 h-4 w-4" /> Editar Espécie
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href={`/cadastros/novo?animalId=${animal.id}&animalNome=${encodeURIComponent(animal.f_nome)}`}>
+                Registrar Indivíduo desta Espécie
+              </Link>
+            </Button>
+          </CardFooter>
+        )}
       </Card>
     </div>
   );
