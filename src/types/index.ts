@@ -39,13 +39,14 @@ export interface Animal {
   f_nomecientifico: string;
   f_nome: string; // Nome vulgar
   f_nomes_alternativos?: string;
+  f_status_conservacao?: string; // Ex: "Pouco Preocupante (LC)", "Ameaçado (EN)"
 }
 
 export type SexoAnimal = 'Macho' | 'Femea' | 'Indefinido';
 export const sexosAnimais: SexoAnimal[] = ['Macho', 'Femea', 'Indefinido'];
 
-export type MarcacaoTipoAnimal = 'Microchip' | 'Microchip / Tatuagem CN01' | 'MC' | 'Anilha CETAS' | 'Anilha TE PZBAC';
-export const marcacaoTiposAnimais: MarcacaoTipoAnimal[] = ['Microchip', 'Microchip / Tatuagem CN01', 'MC', 'Anilha CETAS', 'Anilha TE PZBAC'];
+export type MarcacaoTipoAnimal = 'Microchip' | 'Microchip / Tatuagem CN01' | 'MC' | 'Anilha CETAS' | 'Anilha TE PZBAC' | 'Sem marcação';
+export const marcacaoTiposAnimais: MarcacaoTipoAnimal[] = ['Microchip', 'Microchip / Tatuagem CN01', 'MC', 'Anilha CETAS', 'Anilha TE PZBAC', 'Sem marcação'];
 
 export interface CadastroAnimal {
   id: string;
@@ -63,4 +64,6 @@ export interface CadastroAnimal {
   f_saida?: string; // Store as ISO string (YYYY-MM-DD)
   f_motivosaida?: string;
   f_observacao?: string;
+  f_origem_trafico?: boolean;
+  f_informacoes_trafico?: string;
 }
