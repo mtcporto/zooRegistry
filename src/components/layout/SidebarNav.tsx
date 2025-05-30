@@ -1,18 +1,19 @@
+
 'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Rows, Binary, ShieldHalf, Squirrel, Info } from 'lucide-react';
+import { Home, Squirrel, Info } from 'lucide-react'; // Removido Rows, Binary, ShieldHalf
 import { SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: Home },
-  { href: '/classes', label: 'Classes', icon: Rows },
-  { href: '/ordens', label: 'Ordens', icon: Binary },
-  { href: '/familias', label: 'Famílias', icon: ShieldHalf },
-  { href: '/animais', label: 'Animais', icon: Squirrel },
-  { href: '/cadastros', label: 'Cadastros', icon: Info },
+  // { href: '/classes', label: 'Classes', icon: Rows }, // Removido
+  // { href: '/ordens', label: 'Ordens', icon: Binary },   // Removido
+  // { href: '/familias', label: 'Famílias', icon: ShieldHalf }, // Removido
+  { href: '/animais', label: 'Animais (Espécies)', icon: Squirrel }, // Ajustado o label
+  { href: '/cadastros', label: 'Cadastros Individuais', icon: Info }, // Ajustado o label
 ];
 
 export function SidebarNav() {

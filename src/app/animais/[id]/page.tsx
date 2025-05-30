@@ -17,7 +17,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
         <PageHeader title="Animal não encontrado" description="O animal que você está procurando não existe." />
         <Button asChild>
           <Link href="/animais">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Animais
+            <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Animais (Espécies)
           </Link>
         </Button>
       </div>
@@ -29,7 +29,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
       <div className="mb-6">
         <Button variant="outline" asChild>
           <Link href="/animais">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Animais
+            <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Animais (Espécies)
           </Link>
         </Button>
       </div>
@@ -53,23 +53,31 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 border rounded-lg bg-secondary/30">
-              <h4 className="font-semibold text-primary">Classe</h4>
-              <p>{animal.f_classeNome}</p>
+              <h4 className="font-semibold text-primary">Classe (IUCN)</h4>
+              <p>{animal.f_iucn_className || "N/A"}</p>
             </div>
             <div className="p-4 border rounded-lg bg-secondary/30">
-              <h4 className="font-semibold text-primary">Ordem</h4>
-              <p>{animal.f_ordemNome}</p>
+              <h4 className="font-semibold text-primary">Ordem (IUCN)</h4>
+              <p>{animal.f_iucn_orderName || "N/A"}</p>
             </div>
             <div className="p-4 border rounded-lg bg-secondary/30">
-              <h4 className="font-semibold text-primary">Família</h4>
-              <p>{animal.f_familiaNome}</p>
+              <h4 className="font-semibold text-primary">Família (IUCN)</h4>
+              <p>{animal.f_iucn_familyName || "N/A"}</p>
             </div>
           </div>
 
+          {animal.f_iucn_kingdomName && (
+            <div className="p-4 border rounded-lg bg-secondary/30 mt-4">
+              <h4 className="font-semibold text-primary">Reino (IUCN)</h4>
+              <p>{animal.f_iucn_kingdomName}</p>
+              {animal.f_iucn_phylumName && <p className="text-sm text-muted-foreground">Filo: {animal.f_iucn_phylumName}</p>}
+            </div>
+          )}
+
           {animal.f_status_conservacao && (
             <div>
-              <h3 className="text-xl font-semibold">Status de Conservação</h3>
-              <Badge variant={animal.f_status_conservacao.includes("Ameaçado") || animal.f_status_conservacao.includes("Perigo") ? "destructive" : "secondary"}>
+              <h3 className="text-xl font-semibold">Status de Conservação (IUCN)</h3>
+              <Badge variant={animal.f_status_conservacao === "CR" || animal.f_status_conservacao === "EN" || animal.f_status_conservacao === "VU" ? "destructive" : "secondary"}>
                 {animal.f_status_conservacao}
               </Badge>
             </div>
@@ -77,8 +85,14 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
 
           {animal.f_nomes_alternativos && (
             <div>
-              <h3 className="text-xl font-semibold">Outros Nomes</h3>
+              <h3 className="text-xl font-semibold">Outros Nomes Locais</h3>
               <p className="text-muted-foreground">{animal.f_nomes_alternativos}</p>
+            </div>
+          )}
+          {animal.f_iucn_commonNames && (
+            <div>
+              <h3 className="text-xl font-semibold">Nomes Comuns (IUCN)</h3>
+              <p className="text-muted-foreground">{animal.f_iucn_commonNames}</p>
             </div>
           )}
            <div>
@@ -88,7 +102,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
         <CardFooter className="flex justify-between items-center">
           <Button variant="outline" asChild>
             <Link href={`/animais/${animal.id}/editar`}>
-              <Edit className="mr-2 h-4 w-4" /> Editar Animal (Espécie)
+              <Edit className="mr-2 h-4 w-4" /> Editar Espécie
             </Link>
           </Button>
           <Button asChild>

@@ -4,80 +4,50 @@
 import { revalidatePath } from "next/cache";
 import { db, generateId } from "@/lib/mockDb";
 import type { Animal } from "@/types";
-import { getClassById } from "./classeActions";
-import { getOrdemById } from "./ordemActions";
-import { getFamiliaById } from "./familiaActions";
-import { getConservationStatus } from "@/ai/flows/get-conservation-status-flow";
+import { getConservationStatusAndTaxonomy } from "@/ai/flows/get-conservation-status-flow"; // Atualizado o nome
 import { getAnimalImage } from "@/ai/flows/get-animal-image-flow";
 
 export async function getAnimais(): Promise<Animal[]> {
   await new Promise(resolve => setTimeout(resolve, 500));
-  return Promise.all(db.animais.map(async (animal) => {
-    const classe = await getClassById(animal.f_classeId);
-    const ordem = await getOrdemById(animal.f_ordemId);
-    const familia = await getFamiliaById(animal.f_familiaId);
-    return {
-      ...animal,
-      f_classeNome: classe?.f_nome || "N/A",
-      f_ordemNome: ordem?.f_nome || "N/A",
-      f_familiaNome: familia?.f_nome || "N/A",
-    };
-  }));
+  // Não precisa mais buscar classe/ordem/família separadamente
+  return db.animais;
 }
 
 export async function getAnimalById(id: string): Promise<Animal | undefined> {
   await new Promise(resolve => setTimeout(resolve, 300));
-  const animal = db.animais.find(a => a.id === id);
-  if (animal) {
-    const classe = await getClassById(animal.f_classeId);
-    const ordem = await getOrdemById(animal.f_ordemId);
-    const familia = await getFamiliaById(animal.f_familiaId);
-    return {
-      ...animal,
-      f_classeNome: classe?.f_nome || "N/A",
-      f_ordemNome: ordem?.f_nome || "N/A",
-      f_familiaNome: familia?.f_nome || "N/A",
-    };
-  }
-  return undefined;
+  // Não precisa mais buscar classe/ordem/família separadamente
+  return db.animais.find(a => a.id === id);
 }
 
 export async function addAnimal(formData: FormData): Promise<{ success: boolean; message: string; data?: Animal }> {
   const nomeCientifico = formData.get("f_nomecientifico") as string;
   const nomeVulgar = formData.get("f_nome") as string;
-  const classeId = formData.get("f_classeId") as string;
-  const ordemId = formData.get("f_ordemId") as string;
-  const familiaId = formData.get("f_familiaId") as string;
   const nomesAlternativos = formData.get("f_nomes_alternativos") as string | undefined;
   let imagem = formData.get("f_imagem") as string | undefined;
-  let statusConservacao = formData.get("f_status_conservacao") as string | undefined;
+  let statusConservacaoUser = formData.get("f_status_conservacao") as string | undefined;
 
   if (!nomeCientifico) return { success: false, message: "Nome científico é obrigatório." };
   if (!nomeVulgar) return { success: false, message: "Nome vulgar é obrigatório." };
-  if (!classeId) return { success: false, message: "Classe é obrigatória." };
-  if (!ordemId) return { success: false, message: "Ordem é obrigatória." };
-  if (!familiaId) return { success: false, message: "Família é obrigatória." };
   
-  if (!await getClassById(classeId)) return { success: false, message: "Classe selecionada inválida." };
-  if (!await getOrdemById(ordemId)) return { success: false, message: "Ordem selecionada inválida." };
-  if (!await getFamiliaById(familiaId)) return { success: false, message: "Família selecionada inválida." };
+  let iucnData: Awaited<ReturnType<typeof getConservationStatusAndTaxonomy>> = {
+    status: null, kingdomName: null, phylumName: null, className: null, orderName: null, familyName: null, commonNames: null
+  };
 
-  if ((!statusConservacao || statusConservacao.trim() === "") && nomeCientifico && process.env.IUCN_REDLIST_API_TOKEN) {
+  if (process.env.IUCN_REDLIST_API_TOKEN) {
     try {
-      console.log(`Attempting to fetch IUCN status for ${nomeCientifico}...`);
-      const iucnResult = await getConservationStatus({ scientificName: nomeCientifico });
-      if (iucnResult.status) {
-        statusConservacao = iucnResult.status;
-        console.log(`IUCN status for ${nomeCientifico} successfully fetched: ${statusConservacao}`);
-      } else if (iucnResult.errorMessage) {
-        console.log(`IUCN status fetch for ${nomeCientifico} (API V4): ${iucnResult.errorMessage}`);
+      console.log(`Attempting to fetch IUCN data for ${nomeCientifico}...`);
+      iucnData = await getConservationStatusAndTaxonomy({ scientificName: nomeCientifico });
+      if (iucnData.errorMessage && !iucnData.status) { // Log error if significant
+        console.log(`IUCN data fetch for ${nomeCientifico}: ${iucnData.errorMessage}`);
+      } else {
+        console.log(`IUCN data for ${nomeCientifico} successfully fetched.`);
       }
     } catch (e) {
-        console.error(`Error fetching IUCN status for ${nomeCientifico}:`, e);
+        console.error(`Error fetching IUCN data for ${nomeCientifico}:`, e);
     }
   }
 
-  const searchTermForImage = nomeCientifico || nomeVulgar; // Prioritize scientific name
+  const searchTermForImage = nomeCientifico || nomeVulgar;
   if ((!imagem || imagem.trim() === "") && searchTermForImage && process.env.PEXELS_API_KEY) {
     try {
       console.log(`Attempting to fetch image for "${searchTermForImage}" from Pexels...`);
@@ -93,26 +63,27 @@ export async function addAnimal(formData: FormData): Promise<{ success: boolean;
     }
   }
 
+  const finalStatus = (statusConservacaoUser && statusConservacaoUser.trim() !== "") ? statusConservacaoUser.trim().toUpperCase() : iucnData.status;
 
   const newAnimal: Animal = {
     id: generateId(),
     f_nomecientifico: nomeCientifico,
     f_nome: nomeVulgar,
-    f_classeId: classeId,
-    f_ordemId: ordemId,
-    f_familiaId: familiaId,
     f_nomes_alternativos: nomesAlternativos,
     f_imagem: imagem && imagem.trim() !== "" ? imagem : `https://placehold.co/300x200.png?text=${encodeURIComponent(nomeVulgar)}`,
-    f_status_conservacao: statusConservacao,
+    f_status_conservacao: finalStatus,
+    f_iucn_kingdomName: iucnData.kingdomName,
+    f_iucn_phylumName: iucnData.phylumName,
+    f_iucn_className: iucnData.className,
+    f_iucn_orderName: iucnData.orderName,
+    f_iucn_familyName: iucnData.familyName,
+    f_iucn_commonNames: iucnData.commonNames,
   };
   
   (newAnimal as any)['data-ai-hint'] = nomeVulgar.toLowerCase().split(" ").slice(0,2).join(" ") || "animal photo";
 
   db.animais.push(newAnimal);
   revalidatePath("/animais");
-  revalidatePath(`/classes/${classeId}`);
-  revalidatePath(`/ordens/${ordemId}`);
-  revalidatePath(`/familias/${familiaId}`);
   revalidatePath("/"); 
 
   return { success: true, message: "Animal (espécie) adicionado com sucesso!", data: newAnimal };
@@ -121,22 +92,13 @@ export async function addAnimal(formData: FormData): Promise<{ success: boolean;
 export async function updateAnimal(id: string, formData: FormData): Promise<{ success: boolean; message: string; data?: Animal }> {
   const nomeCientifico = formData.get("f_nomecientifico") as string;
   const nomeVulgar = formData.get("f_nome") as string;
-  const classeId = formData.get("f_classeId") as string;
-  const ordemId = formData.get("f_ordemId") as string;
-  const familiaId = formData.get("f_familiaId") as string;
   const nomesAlternativos = formData.get("f_nomes_alternativos") as string | undefined;
   let imagem = formData.get("f_imagem") as string | undefined;
-  let statusConservacao = formData.get("f_status_conservacao") as string | undefined;
+  let statusConservacaoUser = formData.get("f_status_conservacao") as string | undefined;
+  const rebuscarIUCN = formData.get("f_rebuscar_iucn") === "true";
 
   if (!nomeCientifico) return { success: false, message: "Nome científico é obrigatório." };
   if (!nomeVulgar) return { success: false, message: "Nome vulgar é obrigatório." };
-  if (!classeId) return { success: false, message: "Classe é obrigatória." };
-  if (!ordemId) return { success: false, message: "Ordem é obrigatória." };
-  if (!familiaId) return { success: false, message: "Família é obrigatória." };
-
-  if (!await getClassById(classeId)) return { success: false, message: "Classe selecionada inválida." };
-  if (!await getOrdemById(ordemId)) return { success: false, message: "Ordem selecionada inválida." };
-  if (!await getFamiliaById(familiaId)) return { success: false, message: "Família selecionada inválida." };
 
   const animalIndex = db.animais.findIndex(a => a.id === id);
   if (animalIndex === -1) {
@@ -144,67 +106,84 @@ export async function updateAnimal(id: string, formData: FormData): Promise<{ su
   }
   
   const animalOriginal = db.animais[animalIndex];
+  let iucnData = {
+    status: animalOriginal.f_status_conservacao,
+    kingdomName: animalOriginal.f_iucn_kingdomName,
+    phylumName: animalOriginal.f_iucn_phylumName,
+    className: animalOriginal.f_iucn_className,
+    orderName: animalOriginal.f_iucn_orderName,
+    familyName: animalOriginal.f_iucn_familyName,
+    commonNames: animalOriginal.f_iucn_commonNames,
+  };
 
-  const userProvidedStatus = formData.has("f_status_conservacao");
-  const currentStatusOnForm = formData.get("f_status_conservacao") as string | undefined;
-
-  if ((!userProvidedStatus || (userProvidedStatus && (!currentStatusOnForm || currentStatusOnForm.trim() === ""))) && nomeCientifico && process.env.IUCN_REDLIST_API_TOKEN) {
+  if (rebuscarIUCN && process.env.IUCN_REDLIST_API_TOKEN) {
      try {
-      console.log(`Attempting to fetch IUCN status for ${nomeCientifico} (update)...`);
-      const iucnResult = await getConservationStatus({ scientificName: nomeCientifico });
-      if (iucnResult.status) {
-        statusConservacao = iucnResult.status;
-        console.log(`IUCN status for ${nomeCientifico} successfully fetched: ${statusConservacao}`);
-      } else if (iucnResult.errorMessage) {
-         console.log(`IUCN status fetch for ${nomeCientifico} (API V4): ${iucnResult.errorMessage}`);
-         statusConservacao = userProvidedStatus ? currentStatusOnForm : animalOriginal.f_status_conservacao;
+      console.log(`Re-fetching IUCN data for ${nomeCientifico} (update)...`);
+      const fetchedIUCNData = await getConservationStatusAndTaxonomy({ scientificName: nomeCientifico });
+      if (fetchedIUCNData.errorMessage && !fetchedIUCNData.status) {
+         console.log(`IUCN data re-fetch for ${nomeCientifico}: ${fetchedIUCNData.errorMessage}`);
+      } else {
+        console.log(`IUCN data for ${nomeCientifico} successfully re-fetched.`);
+        iucnData = { // Update with newly fetched data
+            status: fetchedIUCNData.status,
+            kingdomName: fetchedIUCNData.kingdomName,
+            phylumName: fetchedIUCNData.phylumName,
+            className: fetchedIUCNData.className,
+            orderName: fetchedIUCNData.orderName,
+            familyName: fetchedIUCNData.familyName,
+            commonNames: fetchedIUCNData.commonNames,
+        };
       }
     } catch (e) {
-        console.error(`Error fetching IUCN status for ${nomeCientifico}:`, e);
-        statusConservacao = userProvidedStatus ? currentStatusOnForm : animalOriginal.f_status_conservacao;
+        console.error(`Error re-fetching IUCN data for ${nomeCientifico}:`, e);
     }
-  } else if (userProvidedStatus) {
-    statusConservacao = currentStatusOnForm;
-  } else {
-    statusConservacao = animalOriginal.f_status_conservacao;
   }
 
   const userProvidedImage = formData.has("f_imagem");
   const currentImageOnForm = formData.get("f_imagem") as string | undefined;
-  const searchTermForImage = nomeCientifico || nomeVulgar; // Prioritize scientific name
+  const searchTermForImage = nomeCientifico || nomeVulgar;
 
-  if ((!userProvidedImage || (userProvidedImage && (!currentImageOnForm || currentImageOnForm.trim() === ""))) && searchTermForImage && process.env.PEXELS_API_KEY) {
-    try {
-      console.log(`Attempting to fetch image for "${searchTermForImage}" from Pexels (update)...`);
-      const imageResult = await getAnimalImage({ animalName: searchTermForImage });
-      if (imageResult.imageUrl) {
-        imagem = imageResult.imageUrl;
-         console.log(`Image for "${searchTermForImage}" successfully fetched from Pexels: ${imagem}`);
-      } else if (imageResult.errorMessage) {
-        console.log(`Pexels image fetch for "${searchTermForImage}": ${imageResult.errorMessage}`);
-        imagem = userProvidedImage ? currentImageOnForm : animalOriginal.f_imagem;
-      }
-    } catch (e) {
-      console.error(`Error fetching image from Pexels for "${searchTermForImage}":`, e);
-      imagem = userProvidedImage ? currentImageOnForm : animalOriginal.f_imagem;
-    }
-  } else if (userProvidedImage) {
+  if (userProvidedImage && (!currentImageOnForm || currentImageOnForm.trim() === "")) { // User cleared the image field
+     if (searchTermForImage && process.env.PEXELS_API_KEY) {
+        try {
+            console.log(`Attempting to fetch image for "${searchTermForImage}" from Pexels (update - field cleared)...`);
+            const imageResult = await getAnimalImage({ animalName: searchTermForImage });
+            if (imageResult.imageUrl) {
+                imagem = imageResult.imageUrl;
+                console.log(`Image for "${searchTermForImage}" successfully fetched from Pexels: ${imagem}`);
+            } else if (imageResult.errorMessage) {
+                console.log(`Pexels image fetch for "${searchTermForImage}": ${imageResult.errorMessage}`);
+                imagem = `https://placehold.co/300x200.png?text=${encodeURIComponent(nomeVulgar)}`; // Fallback if Pexels fails after clearing
+            }
+            } catch (e) {
+                console.error(`Error fetching image from Pexels for "${searchTermForImage}":`, e);
+                imagem = `https://placehold.co/300x200.png?text=${encodeURIComponent(nomeVulgar)}`;
+            }
+     } else {
+        imagem = `https://placehold.co/300x200.png?text=${encodeURIComponent(nomeVulgar)}`;
+     }
+  } else if (userProvidedImage) { // User provided a new image URL or kept the existing one
     imagem = currentImageOnForm;
-  } else {
+  } else { // User didn't touch the image field, keep original
     imagem = animalOriginal.f_imagem;
   }
 
+
+  const finalStatus = (statusConservacaoUser && statusConservacaoUser.trim() !== "") ? statusConservacaoUser.trim().toUpperCase() : iucnData.status;
 
   const updatedAnimal: Animal = {
     ...animalOriginal,
     f_nomecientifico: nomeCientifico,
     f_nome: nomeVulgar,
-    f_classeId: classeId,
-    f_ordemId: ordemId,
-    f_familiaId: familiaId,
     f_nomes_alternativos: nomesAlternativos,
     f_imagem: imagem && imagem.trim() !== "" ? imagem : `https://placehold.co/300x200.png?text=${encodeURIComponent(nomeVulgar)}`,
-    f_status_conservacao: statusConservacao,
+    f_status_conservacao: finalStatus,
+    f_iucn_kingdomName: iucnData.kingdomName,
+    f_iucn_phylumName: iucnData.phylumName,
+    f_iucn_className: iucnData.className,
+    f_iucn_orderName: iucnData.orderName,
+    f_iucn_familyName: iucnData.familyName,
+    f_iucn_commonNames: iucnData.commonNames,
   };
 
   (updatedAnimal as any)['data-ai-hint'] = nomeVulgar.toLowerCase().split(" ").slice(0,2).join(" ") || "animal photo";
@@ -214,14 +193,7 @@ export async function updateAnimal(id: string, formData: FormData): Promise<{ su
   revalidatePath("/animais");
   revalidatePath(`/animais/${id}`);
   revalidatePath(`/animais/${id}/editar`);
-  revalidatePath(`/classes/${classeId}`);
-  revalidatePath(`/ordens/${ordemId}`);
-  revalidatePath(`/familias/${familiaId}`);
   revalidatePath("/");
-
-  if (animalOriginal.f_classeId !== classeId) revalidatePath(`/classes/${animalOriginal.f_classeId}`);
-  if (animalOriginal.f_ordemId !== ordemId) revalidatePath(`/ordens/${animalOriginal.f_ordemId}`);
-  if (animalOriginal.f_familiaId !== familiaId) revalidatePath(`/familias/${animalOriginal.f_familiaId}`);
 
   return { success: true, message: "Animal (espécie) atualizado com sucesso!", data: updatedAnimal };
 }
@@ -238,14 +210,10 @@ export async function deleteAnimal(id: string): Promise<{ success: boolean; mess
     return { success: false, message: "Não é possível excluir a espécie. Existem cadastros individuais associados a ela." };
   }
 
-  const animalToDelete = db.animais[animalIndex];
   db.animais.splice(animalIndex, 1);
   
   revalidatePath("/animais");
   revalidatePath(`/animais/${id}`);
-  revalidatePath(`/classes/${animalToDelete.f_classeId}`);
-  revalidatePath(`/ordens/${animalToDelete.f_ordemId}`);
-  revalidatePath(`/familias/${animalToDelete.f_familiaId}`);
   revalidatePath("/");
   
   return { success: true, message: "Animal (espécie) excluído com sucesso!" };

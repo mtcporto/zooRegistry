@@ -6,9 +6,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { Eye, Squirrel } from "lucide-react"; // Removed Edit, Trash2
+import { Eye, Squirrel } from "lucide-react"; 
 import { Badge } from "@/components/ui/badge";
-// DeleteConfirmationButton is no longer needed on this page
 
 export default async function HomePage() {
   const animais = await getAnimais();
@@ -18,7 +17,6 @@ export default async function HomePage() {
       <PageHeader
         title="Visão Geral do Plantel"
         description="Navegue pelas espécies de animais cadastradas no sistema."
-        // No actionButton here, new animals are added via /animais/novo (accessed from /animais or sidebar)
       />
       {animais.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -38,25 +36,30 @@ export default async function HomePage() {
                 <CardDescription className="italic">{animal.f_nomecientifico}</CardDescription>
               </CardHeader>
               <CardContent className="flex-grow space-y-1 text-sm">
-                <div><Badge variant="outline">Classe:</Badge> {animal.f_classeNome}</div>
-                <div><Badge variant="outline">Ordem:</Badge> {animal.f_ordemNome}</div>
-                <div><Badge variant="outline">Família:</Badge> {animal.f_familiaNome}</div>
+                <div><Badge variant="outline">Classe:</Badge> {animal.f_iucn_className || "N/A"}</div>
+                <div><Badge variant="outline">Ordem:</Badge> {animal.f_iucn_orderName || "N/A"}</div>
+                <div><Badge variant="outline">Família:</Badge> {animal.f_iucn_familyName || "N/A"}</div>
                 {animal.f_status_conservacao && (
                   <div>
-                    <Badge variant={animal.f_status_conservacao.includes("Ameaçado") || animal.f_status_conservacao.includes("Perigo") || animal.f_status_conservacao === "CR" || animal.f_status_conservacao === "EN" || animal.f_status_conservacao === "VU" ? "destructive" : "secondary"}>
-                      Status:
+                    <Badge variant={animal.f_status_conservacao === "CR" || animal.f_status_conservacao === "EN" || animal.f_status_conservacao === "VU" ? "destructive" : "secondary"}>
+                      Status IUCN:
                     </Badge> {animal.f_status_conservacao}
                   </div>
                 )}
                 {animal.f_nomes_alternativos && (
                   <div className="text-xs text-muted-foreground pt-1">
-                    Também conhecido como: {animal.f_nomes_alternativos}
+                    Nomes Locais: {animal.f_nomes_alternativos}
+                  </div>
+                )}
+                {animal.f_iucn_commonNames && (
+                  <div className="text-xs text-muted-foreground pt-1">
+                    Nomes Comuns (IUCN): {animal.f_iucn_commonNames}
                   </div>
                 )}
               </CardContent>
               <CardFooter className="border-t pt-4 flex justify-end gap-2">
                 <Button variant="outline" size="sm" asChild title="Ver Detalhes da Espécie">
-                  <Link href={`/animais/${animal.id}`}><Eye className="mr-1 h-4 w-4" /> Ver Detalhes da Espécie</Link>
+                  <Link href={`/animais/${animal.id}`}><Eye className="mr-1 h-4 w-4" /> Ver Detalhes</Link>
                 </Button>
               </CardFooter>
             </Card>
@@ -67,7 +70,7 @@ export default async function HomePage() {
           <CardContent className="text-center text-muted-foreground py-12">
             <Squirrel className="mx-auto h-12 w-12 text-gray-400 mb-4" />
             <h3 className="text-xl font-semibold mb-2">Nenhuma espécie animal registrada ainda.</h3>
-            <p>Utilize a seção "Animais" no menu lateral para adicionar uma nova espécie.</p>
+            <p>Utilize a seção "Animais (Espécies)" no menu lateral para adicionar uma nova espécie.</p>
           </CardContent>
         </Card>
       )}

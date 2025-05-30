@@ -27,7 +27,7 @@ export default async function AnimaisPage() {
       <PageHeader
         title="Animais (Espécies)"
         description="Navegue e gerencie as espécies de animais registradas."
-        actionButton={{ href: "/animais/novo", label: "Novo Animal" }}
+        actionButton={{ href: "/animais/novo", label: "Nova Espécie" }}
       />
       <Card className="shadow-lg">
         <CardHeader>
@@ -42,10 +42,10 @@ export default async function AnimaisPage() {
                   <TableHead className="w-[100px]">Imagem</TableHead>
                   <TableHead>Nome Vulgar</TableHead>
                   <TableHead>Nome Científico</TableHead>
-                  <TableHead>Classe</TableHead>
-                  <TableHead>Ordem</TableHead>
-                  <TableHead>Família</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Classe (IUCN)</TableHead>
+                  <TableHead>Ordem (IUCN)</TableHead>
+                  <TableHead>Família (IUCN)</TableHead>
+                  <TableHead>Status IUCN</TableHead>
                   <TableHead className="text-right w-[180px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -64,12 +64,12 @@ export default async function AnimaisPage() {
                     </TableCell>
                     <TableCell className="font-medium">{animal.f_nome}</TableCell>
                     <TableCell className="italic">{animal.f_nomecientifico}</TableCell>
-                    <TableCell>{animal.f_classeNome}</TableCell>
-                    <TableCell>{animal.f_ordemNome}</TableCell>
-                    <TableCell>{animal.f_familiaNome}</TableCell>
+                    <TableCell>{animal.f_iucn_className || "N/A"}</TableCell>
+                    <TableCell>{animal.f_iucn_orderName || "N/A"}</TableCell>
+                    <TableCell>{animal.f_iucn_familyName || "N/A"}</TableCell>
                     <TableCell>
                       {animal.f_status_conservacao ? (
-                        <Badge variant={animal.f_status_conservacao.includes("Ameaçado") || animal.f_status_conservacao.includes("Perigo") || animal.f_status_conservacao === "CR" || animal.f_status_conservacao === "EN" || animal.f_status_conservacao === "VU" ? "destructive" : "secondary"}>
+                        <Badge variant={animal.f_status_conservacao === "CR" || animal.f_status_conservacao === "EN" || animal.f_status_conservacao === "VU" ? "destructive" : "secondary"}>
                           {animal.f_status_conservacao}
                         </Badge>
                       ) : (

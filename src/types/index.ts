@@ -1,45 +1,21 @@
 
-export interface Classe {
-  id: string;
-  f_nome: string;
-  f_descricao?: string;
-  f_imagem?: string; // URL to image
-  f_hero?: string;   // URL to hero image
-}
-
-export interface Ordem {
-  id: string;
-  f_classeId: string; // Reference to Classe
-  f_classeNome?: string; // For display purposes
-  f_nome: string;
-  f_descricao?: string;
-  f_imagem?: string; // URL to image
-  f_hero?: string;   // URL to hero image
-}
-
-export interface Familia {
-  id: string;
-  f_ordemId: string; // Reference to Ordem
-  f_ordemNome?: string; // For display purposes
-  f_nome: string;
-  f_descricao?: string;
-  f_imagem?: string; // URL to image
-  f_hero?: string;   // URL to hero image
-}
+// Remove Classe, Ordem, Familia interfaces
 
 export interface Animal {
   id: string;
-  f_classeId: string; // Reference to Classe
-  f_classeNome?: string; // For display
-  f_ordemId: string;  // Reference to Ordem
-  f_ordemNome?: string; // For display
-  f_familiaId: string; // Reference to Familia
-  f_familiaNome?: string; // For display
-  f_imagem?: string;    // URL to image
   f_nomecientifico: string;
   f_nome: string; // Nome vulgar
   f_nomes_alternativos?: string;
-  f_status_conservacao?: string; // Ex: "Pouco Preocupante (LC)", "Ameaçado (EN)"
+  f_imagem?: string;    // URL to image
+  f_status_conservacao?: string; // Ex: "Pouco Preocupante (LC)", "Ameaçado (EN)", "EN" (código IUCN)
+  
+  // Campos preenchidos pela API da IUCN
+  f_iucn_kingdomName?: string;
+  f_iucn_phylumName?: string;
+  f_iucn_className?: string;
+  f_iucn_orderName?: string;
+  f_iucn_familyName?: string;
+  f_iucn_commonNames?: string; // Nomes comuns concatenados
 }
 
 export type SexoAnimal = 'Macho' | 'Femea' | 'Indefinido';
@@ -51,7 +27,7 @@ export const marcacaoTiposAnimais: MarcacaoTipoAnimal[] = ['Microchip', 'Microch
 export interface CadastroAnimal {
   id: string;
   f_animalId: string; // Reference to Animal
-  f_animalNome?: string; // For display purposes
+  f_animalNome?: string; // For display purposes (nome vulgar da espécie)
   f_apelido?: string;
   f_registro?: string;
   f_procedencia?: string;

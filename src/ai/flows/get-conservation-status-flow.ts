@@ -1,134 +1,195 @@
 
 'use server';
 /**
- * @fileOverview A flow to fetch the conservation status of a species from the IUCN Red List API v4.
+ * @fileOverview A flow to fetch the conservation status and taxonomic info of a species from the IUCN Red List API v4.
  *
- * - getConservationStatus - A function that attempts to fetch the conservation status.
- * - GetConservationStatusInput - The input type for the getConservationStatus function.
- * - GetConservationStatusOutput - The return type for the getConservationStatus function.
+ * - getConservationStatusAndTaxonomy - A function that attempts to fetch the data.
+ * - GetIUCNDataInput - The input type for the function.
+ * - GetIUCNDataOutput - The return type for the function.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-const GetConservationStatusInputSchema = z.object({
-  scientificName: z.string().describe('The scientific name of the species to look up.'),
+const GetIUCNDataInputSchema = z.object({
+  scientificName: z.string().describe('The scientific name of the species to look up (e.g., "Panthera leo").'),
 });
-export type GetConservationStatusInput = z.infer<typeof GetConservationStatusInputSchema>;
+export type GetIUCNDataInput = z.infer<typeof GetIUCNDataInputSchema>;
 
-// IUCN Red List categories (Codes)
 const ConservationStatusCategorySchema = z.enum([
   "EX", "EW", "CR", "EN", "VU", "NT", "LC", "DD", "NE"
 ]).nullable();
 
-const GetConservationStatusOutputSchema = z.object({
+const GetIUCNDataOutputSchema = z.object({
   status: ConservationStatusCategorySchema.describe('The IUCN conservation status category code (e.g., VU, EN, LC) or null if not found/error.'),
+  kingdomName: z.string().nullable().describe('Kingdom name from IUCN.'),
+  phylumName: z.string().nullable().describe('Phylum name from IUCN.'),
+  className: z.string().nullable().describe('Class name from IUCN.'),
+  orderName: z.string().nullable().describe('Order name from IUCN.'),
+  familyName: z.string().nullable().describe('Family name from IUCN.'),
+  commonNames: z.string().nullable().describe('Concatenated common names from IUCN (English preferred).'),
   errorMessage: z.string().optional().describe('An error message if the status could not be fetched.'),
 });
-export type GetConservationStatusOutput = z.infer<typeof GetConservationStatusOutputSchema>;
+export type GetIUCNDataOutput = z.infer<typeof GetIUCNDataOutputSchema>;
 
-export async function getConservationStatus(input: GetConservationStatusInput): Promise<GetConservationStatusOutput> {
-  return getConservationStatusFlow(input);
+export async function getConservationStatusAndTaxonomy(input: GetIUCNDataInput): Promise<GetIUCNDataOutput> {
+  return getIUCNDataFlow(input);
 }
 
-const getConservationStatusFlow = ai.defineFlow(
+const getIUCNDataFlow = ai.defineFlow(
   {
-    name: 'getConservationStatusFlow',
-    inputSchema: GetConservationStatusInputSchema,
-    outputSchema: GetConservationStatusOutputSchema,
+    name: 'getIUCNDataFlow',
+    inputSchema: GetIUCNDataInputSchema,
+    outputSchema: GetIUCNDataOutputSchema,
   },
   async (input) => {
-    const apiKey = process.env.IUCN_REDLIST_API_TOKEN; 
+    const apiKey = process.env.IUCN_REDLIST_API_TOKEN;
 
     if (!apiKey) {
       console.warn("IUCN_REDLIST_API_TOKEN not set in environment variables. Skipping API call.");
-      return { status: null, errorMessage: "IUCN API token not configured. Please set IUCN_REDLIST_API_TOKEN in your .env or .env.local file." };
+      return { 
+        status: null, 
+        kingdomName: null, phylumName: null, className: null, orderName: null, familyName: null, commonNames: null,
+        errorMessage: "IUCN API token not configured. Please set IUCN_REDLIST_API_TOKEN in your .env or .env.local file." 
+      };
     }
 
     if (!input.scientificName || input.scientificName.trim() === "") {
-        return { status: null, errorMessage: "Scientific name is required." };
+        return { 
+            status: null, 
+            kingdomName: null, phylumName: null, className: null, orderName: null, familyName: null, commonNames: null,
+            errorMessage: "Scientific name is required." 
+        };
     }
-    
-    const API_BASE_URL = "http://apiv3.iucnredlist.org/api/v4"; 
+
+    const nameParts = input.scientificName.trim().split(/\s+/);
+    if (nameParts.length < 2) {
+      return { 
+        status: null, 
+        kingdomName: null, phylumName: null, className: null, orderName: null, familyName: null, commonNames: null,
+        errorMessage: "Scientific name should include at least genus and species (e.g., 'Panthera leo')." 
+      };
+    }
+    const genusName = nameParts[0];
+    const speciesName = nameParts[1];
+    // const infraName = nameParts.length > 2 ? nameParts.slice(2).join(" ") : undefined; // Optional for trinomials
+
+    const API_BASE_URL = "https://api.iucnredlist.org/api/v4"; 
+    // const url = `${API_BASE_URL}/taxa/scientific_name/${encodeURIComponent(input.scientificName)}?token=${apiKey}`; // Old URL
+    let url = `${API_BASE_URL}/taxa/scientific_name?genus_name=${encodeURIComponent(genusName)}&species_name=${encodeURIComponent(speciesName)}&token=${apiKey}`;
+    // if (infraName) {
+    //   url += `&infra_name=${encodeURIComponent(infraName)}`;
+    // }
+
+
+    console.log(`Fetching IUCN data from: ${API_BASE_URL}/taxa/scientific_name?genus_name=${genusName}&species_name=${speciesName}... (token omitted)`);
 
     try {
-      // Step 1: Get assessment IDs for the species
-      // Example: http://apiv3.iucnredlist.org/api/v4/taxa/scientific_name/Loxodonta%20africana?token=YOUR_TOKEN
-      const taxaUrl = `${API_BASE_URL}/taxa/scientific_name/${encodeURIComponent(input.scientificName)}?token=${apiKey}`;
-      console.log(`Fetching taxa info from: ${taxaUrl}`);
-      const taxaResponse = await fetch(taxaUrl);
+      const response = await fetch(url, { headers: { 'Authorization': apiKey, 'Accept': 'application/json' } });
 
-      if (!taxaResponse.ok) {
-        if (taxaResponse.status === 404) {
-          return { status: null, errorMessage: `Species not found on IUCN Red List (v4 taxa): ${input.scientificName}` };
+      if (!response.ok) {
+        if (response.status === 404) {
+          return { 
+            status: null, 
+            kingdomName: null, phylumName: null, className: null, orderName: null, familyName: null, commonNames: null,
+            errorMessage: `Species not found on IUCN Red List: ${input.scientificName}` 
+          };
         }
-        const errorText = await taxaResponse.text();
-        throw new Error(`IUCN API (taxa) request failed with status ${taxaResponse.status}: ${errorText}`);
+        const errorText = await response.text();
+        console.error(`IUCN API request failed for ${input.scientificName} with status ${response.status}: ${errorText}`);
+        throw new Error(`IUCN API request failed with status ${response.status}: ${errorText}`);
       }
 
-      const taxaData = await taxaResponse.json();
+      const data = await response.json();
 
-      if (!taxaData || !taxaData.result || taxaData.result.length === 0) {
-        return { status: null, errorMessage: `No assessment entries found for ${input.scientificName} on IUCN Red List (v4).` };
-      }
-
-      // Find the latest global assessment ID
-      // Each item in taxaData.result can have 'assessment_id', 'year_published', 'scope'.
-      // We are interested in scope: "Global" and the latest 'year_published'.
-      const globalAssessments = taxaData.result.filter((a: any) => a.scope === 'Global');
-      
-      if (globalAssessments.length === 0) {
-         return { status: null, errorMessage: `No global assessments found for ${input.scientificName} on IUCN Red List (v4).` };
+      if (!data || !data.taxon || !data.assessments || data.assessments.length === 0) {
+        return { 
+            status: null, 
+            kingdomName: null, phylumName: null, className: null, orderName: null, familyName: null, commonNames: null,
+            errorMessage: `No assessment entries found for ${input.scientificName} on IUCN Red List.` 
+        };
       }
       
-      // Sort by year_published, descending, to get the latest.
-      globalAssessments.sort((a: any, b: any) => {
-        const yearA = parseInt(a.year_published, 10);
-        const yearB = parseInt(b.year_published, 10);
-        if (isNaN(yearA) && isNaN(yearB)) return 0;
-        if (isNaN(yearA)) return 1; // Put NaNs last
-        if (isNaN(yearB)) return -1; // Put NaNs last
-        return yearB - yearA;
-      });
-      
-      const latestGlobalAssessment = globalAssessments[0];
-      const latestAssessmentId = latestGlobalAssessment.assessment_id;
+      const taxonInfo = data.taxon;
+      let latestAssessment = null;
 
-      if (!latestAssessmentId) {
-         return { status: null, errorMessage: `Could not determine latest global assessment ID for ${input.scientificName}.` };
-      }
-      console.log(`Latest global assessment ID for ${input.scientificName}: ${latestAssessmentId}`);
+      // Try to find the assessment marked as "latest: true" and "scope: Global"
+      const latestGlobalTrue = data.assessments.find((a: any) => 
+        a.latest === true && a.scopes && a.scopes.some((s: any) => s.code === "1" || s.description?.en?.toLowerCase() === 'global')
+      );
 
-      // Step 2: Get details for the latest assessment
-      // Example: http://apiv3.iucnredlist.org/api/v4/assessment/22395464?token=YOUR_TOKEN
-      const assessmentUrl = `${API_BASE_URL}/assessment/${latestAssessmentId}?token=${apiKey}`;
-      console.log(`Fetching assessment details from: ${assessmentUrl}`);
-      const assessmentResponse = await fetch(assessmentUrl);
-
-      if (!assessmentResponse.ok) {
-        const errorText = await assessmentResponse.text();
-        throw new Error(`IUCN API (assessment) request for ID ${latestAssessmentId} failed with status ${assessmentResponse.status}: ${errorText}`);
-      }
-      const assessmentData = await assessmentResponse.json();
-      
-      // The category should be in 'redlistCategory' field of the assessment data
-      const category = assessmentData.redlistCategory; 
-
-      if (category && ConservationStatusCategorySchema.safeParse(category).success) {
-        console.log(`Successfully fetched status for ${input.scientificName}: ${category}`);
-        return { status: category as z.infer<typeof ConservationStatusCategorySchema>, errorMessage: undefined };
+      if (latestGlobalTrue) {
+        latestAssessment = latestGlobalTrue;
       } else {
-        console.warn(`Received unknown or missing category from IUCN v4: '${category}' for ${input.scientificName}, assessment ID ${latestAssessmentId}. Full assessment data:`, assessmentData);
-        return { status: null, errorMessage: `Unknown or missing category from IUCN v4: '${category || 'Not provided'}'` };
+        // Fallback: find the most recent global assessment by year_published
+        const globalAssessments = data.assessments.filter((a: any) => 
+          a.scopes && a.scopes.some((s: any) => s.code === "1" || s.description?.en?.toLowerCase() === 'global')
+        );
+        
+        if (globalAssessments.length > 0) {
+          globalAssessments.sort((a: any, b: any) => parseInt(b.year_published, 10) - parseInt(a.year_published, 10));
+          latestAssessment = globalAssessments[0];
+        }
+      }
+      
+      if (!latestAssessment) {
+         return { 
+            status: null, 
+            kingdomName: taxonInfo.kingdom_name || null,
+            phylumName: taxonInfo.phylum_name || null,
+            className: taxonInfo.class_name || null,
+            orderName: taxonInfo.order_name || null,
+            familyName: taxonInfo.family_name || null,
+            commonNames: taxonInfo.common_names?.find((cn:any) => cn.main)?.name || taxonInfo.common_names?.[0]?.name || null,
+            errorMessage: `No suitable (latest global) assessment found for ${input.scientificName}. Taxon data retrieved.` 
+        };
+      }
+
+      const category = latestAssessment.red_list_category_code;
+      const parsedCategory = ConservationStatusCategorySchema.safeParse(category);
+
+      const extractedCommonNames = taxonInfo.common_names
+        ?.filter((cn: any) => cn.language === 'eng' || cn.main) // Prefer English or main
+        .map((cn: any) => cn.name)
+        .join(', ');
+
+      if (parsedCategory.success) {
+        console.log(`Successfully fetched IUCN data for ${input.scientificName}: Status ${category}, Class ${taxonInfo.class_name}`);
+        return { 
+            status: parsedCategory.data, 
+            kingdomName: taxonInfo.kingdom_name || null,
+            phylumName: taxonInfo.phylum_name || null,
+            className: taxonInfo.class_name || null,
+            orderName: taxonInfo.order_name || null,
+            familyName: taxonInfo.family_name || null,
+            commonNames: extractedCommonNames || null,
+            errorMessage: undefined 
+        };
+      } else {
+        console.warn(`Received unknown or missing category from IUCN: '${category}' for ${input.scientificName}. Assessment ID ${latestAssessment.assessment_id}.`);
+        return { 
+            status: null, 
+            kingdomName: taxonInfo.kingdom_name || null,
+            phylumName: taxonInfo.phylum_name || null,
+            className: taxonInfo.class_name || null,
+            orderName: taxonInfo.order_name || null,
+            familyName: taxonInfo.family_name || null,
+            commonNames: extractedCommonNames || null,
+            errorMessage: `Unknown or missing category from IUCN: '${category || 'Not provided'}'` 
+        };
       }
 
     } catch (error) {
-      console.error(`Error fetching conservation status from IUCN v4 for ${input.scientificName}:`, error);
-      let message = 'An unexpected error occurred while fetching conservation status (v4).';
+      console.error(`Error fetching IUCN data for ${input.scientificName}:`, error);
+      let message = 'An unexpected error occurred while fetching IUCN data.';
       if (error instanceof Error) {
         message = error.message;
       }
-      return { status: null, errorMessage: message };
+      return { 
+        status: null, 
+        kingdomName: null, phylumName: null, className: null, orderName: null, familyName: null, commonNames: null,
+        errorMessage: message 
+      };
     }
   }
 );
