@@ -65,7 +65,7 @@ export default async function CadastroDetailPage({ params }: { params: { id: str
             {cadastro.f_apelido || `Registro #${cadastro.f_registro}` || `Animal Individual #${cadastro.id}`}
           </CardTitle>
           <CardDescription className="text-lg">
-            Espécie: <Link href={`/animais/${cadastro.f_animalId}`} className="text-accent hover:underline">{cadastro.f_animalNome}</Link>
+            Espécie: <Link href={`/animais/${cadastro.f_animalId}?view=public`} className="text-accent hover:underline">{cadastro.f_animalNome}</Link>
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">

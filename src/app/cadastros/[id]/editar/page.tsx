@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 export default async function EditarCadastroPage({ params }: { params: { id: string } }) {
   const [cadastro, animais] = await Promise.all([
     getCadastroById(params.id),

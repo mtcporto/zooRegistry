@@ -35,7 +35,7 @@ export default async function HomePage() {
                     alt={animal.f_nome || 'Imagem do animal'}
                     fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    className="object-contain" // Alterado de object-cover para object-contain
+                    className="object-contain" 
                     data-ai-hint={imageHint}
                   />
                 </div>
