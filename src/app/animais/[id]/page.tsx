@@ -26,6 +26,10 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
     );
   }
 
+  const imageUrl = animal.f_imagem || `https://placehold.co/600x400.png?text=${encodeURIComponent(animal.f_nome)}`;
+  const imageAlt = `${animal.f_nome} - ${animal.f_nomecientifico}`;
+  const imageHint = (animal as any)['data-ai-hint'] || animal.f_nome.toLowerCase().split(" ").slice(0,2).join(" ");
+
   return (
     <div className="container mx-auto p-4 md:p-8">
       <div className="mb-6">
@@ -37,18 +41,16 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
       </div>
 
       <Card className="overflow-hidden shadow-xl">
-        {animal.f_imagem && (
-          <div className="relative w-full h-64 md:h-96 bg-muted">
-            <Image
-              src={animal.f_imagem}
-              alt={`${animal.f_nome} - ${animal.f_nomecientifico}`}
-              fill
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              className="object-contain" // Changed from object-cover to object-contain for better detail view
-              data-ai-hint={ (animal as any)['data-ai-hint'] || animal.f_nome.toLowerCase().split(" ").slice(0,2).join(" ") }
-            />
-          </div>
-        )}
+        <div className="relative w-full h-64 md:h-96 bg-muted">
+          <Image
+            src={imageUrl}
+            alt={imageAlt}
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="object-contain"
+            data-ai-hint={imageHint}
+          />
+        </div>
         <CardHeader className="pt-6">
           <CardTitle className="text-4xl font-extrabold text-primary">{animal.f_nome}</CardTitle>
           <CardDescription className="text-2xl italic text-muted-foreground">{animal.f_nomecientifico}</CardDescription>
