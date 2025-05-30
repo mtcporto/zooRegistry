@@ -38,21 +38,22 @@ const getConservationStatusFlow = ai.defineFlow(
     outputSchema: GetConservationStatusOutputSchema,
   },
   async (input) => {
-    const apiKey = process.env.IUCN_REDLIST_API_TOKEN; // Ensure this matches your .env.local key name
+    const apiKey = process.env.IUCN_REDLIST_API_TOKEN; 
 
     if (!apiKey) {
-      console.warn("IUCN_REDLIST_API_TOKEN not set. Skipping API call.");
-      return { status: null, errorMessage: "IUCN API token not configured." };
+      console.warn("IUCN_REDLIST_API_TOKEN not set in environment variables. Skipping API call.");
+      return { status: null, errorMessage: "IUCN API token not configured. Please set IUCN_REDLIST_API_TOKEN in your .env or .env.local file." };
     }
 
     if (!input.scientificName || input.scientificName.trim() === "") {
         return { status: null, errorMessage: "Scientific name is required." };
     }
     
-    const API_BASE_URL = "http://apiv3.iucnredlist.org/api/v4"; // Base URL for IUCN API v4
+    const API_BASE_URL = "http://apiv3.iucnredlist.org/api/v4"; 
 
     try {
-      // 1. Get assessment IDs for the species
+      // Step 1: Get assessment IDs for the species
+      // Example: http://apiv3.iucnredlist.org/api/v4/taxa/scientific_name/Loxodonta%20africana?token=YOUR_TOKEN
       const taxaUrl = `${API_BASE_URL}/taxa/scientific_name/${encodeURIComponent(input.scientificName)}?token=${apiKey}`;
       console.log(`Fetching taxa info from: ${taxaUrl}`);
       const taxaResponse = await fetch(taxaUrl);
@@ -72,8 +73,8 @@ const getConservationStatusFlow = ai.defineFlow(
       }
 
       // Find the latest global assessment ID
-      // IUCN API v4 /taxa/scientific_name/{name} returns an array in 'result'.
-      // Each item can have 'assessment_id', 'year_published', 'scope'.
+      // Each item in taxaData.result can have 'assessment_id', 'year_published', 'scope'.
+      // We are interested in scope: "Global" and the latest 'year_published'.
       const globalAssessments = taxaData.result.filter((a: any) => a.scope === 'Global');
       
       if (globalAssessments.length === 0) {
@@ -98,7 +99,8 @@ const getConservationStatusFlow = ai.defineFlow(
       }
       console.log(`Latest global assessment ID for ${input.scientificName}: ${latestAssessmentId}`);
 
-      // 2. Get details for the latest assessment
+      // Step 2: Get details for the latest assessment
+      // Example: http://apiv3.iucnredlist.org/api/v4/assessment/22395464?token=YOUR_TOKEN
       const assessmentUrl = `${API_BASE_URL}/assessment/${latestAssessmentId}?token=${apiKey}`;
       console.log(`Fetching assessment details from: ${assessmentUrl}`);
       const assessmentResponse = await fetch(assessmentUrl);
@@ -109,8 +111,7 @@ const getConservationStatusFlow = ai.defineFlow(
       }
       const assessmentData = await assessmentResponse.json();
       
-      // IUCN API v4 /assessment/{id} returns the category in 'redlistCategory'.
-      // This should be a code like "VU", "EN".
+      // The category should be in 'redlistCategory' field of the assessment data
       const category = assessmentData.redlistCategory; 
 
       if (category && ConservationStatusCategorySchema.safeParse(category).success) {
