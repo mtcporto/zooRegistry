@@ -1,8 +1,17 @@
 
 import { PageHeader } from "@/components/PageHeader";
-import { getAnimais, deleteAnimal } from "@/lib/actions/animalActions"; 
+import { getAnimais, deleteAnimal } from "@/lib/actions/animalActions";
 import type { Animal } from "@/types";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
@@ -20,62 +29,81 @@ export default async function AnimaisPage() {
         description="Navegue e gerencie as espécies de animais registradas."
         actionButton={{ href: "/animais/novo", label: "Novo Animal" }}
       />
-      {animais.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {animais.map((animal) => (
-            <Card key={animal.id} className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <div className="relative w-full h-48">
-                <Image
-                  src={animal.f_imagem || "https://placehold.co/400x300.png?text=Sem+Imagem"}
-                  alt={animal.f_nome}
-                  layout="fill"
-                  objectFit="cover"
-                  data-ai-hint={ (animal as any)['data-ai-hint'] || animal.f_nome.toLowerCase().split(" ").slice(0,2).join(" ") }
-                />
-              </div>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xl font-semibold text-primary">{animal.f_nome}</CardTitle>
-                <CardDescription className="italic">{animal.f_nomecientifico}</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow space-y-1 text-sm">
-                <div><Badge variant="outline">Classe:</Badge> {animal.f_classeNome}</div>
-                <div><Badge variant="outline">Ordem:</Badge> {animal.f_ordemNome}</div>
-                <div><Badge variant="outline">Família:</Badge> {animal.f_familiaNome}</div>
-                {animal.f_status_conservacao && <div><Badge variant={animal.f_status_conservacao.includes("Ameaçado") || animal.f_status_conservacao.includes("Perigo") ? "destructive" : "secondary"}>Status:</Badge> {animal.f_status_conservacao}</div>}
-                {animal.f_nomes_alternativos && (
-                  <div className="text-xs text-muted-foreground pt-1">
-                    Também conhecido como: {animal.f_nomes_alternativos}
-                  </div>
-                )}
-              </CardContent>
-              <CardFooter className="border-t pt-4 flex justify-end gap-2">
-                <Button variant="ghost" size="sm" asChild title="Visualizar">
-                  <Link href={`/animais/${animal.id}`}><Eye className="mr-1 h-4 w-4" /> Ver</Link>
-                </Button>
-                <Button variant="ghost" size="sm" asChild title="Editar">
-                  <Link href={`/animais/${animal.id}/editar`}><Edit className="mr-1 h-4 w-4" /> Editar</Link>
-                </Button>
-                 <DeleteConfirmationButton
-                    itemId={animal.id}
-                    itemName={animal.f_nome}
-                    itemType="Animal (Espécie)"
-                    deleteAction={deleteAnimal} 
-                    triggerButtonProps={{variant: "ghost", size: "sm", title: "Excluir"}}
-                    triggerIcon={<><Trash2 className="mr-1 h-4 w-4" /> Excluir</>}
-                  />
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <Card className="shadow-lg">
-          <CardContent className="text-center text-muted-foreground py-12">
-            <Squirrel className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Nenhum animal registrado ainda.</h3>
-            <p>Comece adicionando uma nova espécie.</p>
-          </CardContent>
-        </Card>
-      )}
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle>Lista de Espécies</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {animais.length > 0 ? (
+            <Table>
+              <TableCaption>Uma lista das espécies de animais registradas.</TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[100px]">Imagem</TableHead>
+                  <TableHead>Nome Vulgar</TableHead>
+                  <TableHead>Nome Científico</TableHead>
+                  <TableHead>Classe</TableHead>
+                  <TableHead>Ordem</TableHead>
+                  <TableHead>Família</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right w-[180px]">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {animais.map((animal) => (
+                  <TableRow key={animal.id}>
+                    <TableCell>
+                      <Image
+                        src={animal.f_imagem || "https://placehold.co/100x60.png?text=Sem+Imagem"}
+                        alt={animal.f_nome}
+                        width={100}
+                        height={60}
+                        className="rounded object-cover"
+                        data-ai-hint={ (animal as any)['data-ai-hint'] || animal.f_nome.toLowerCase().split(" ").slice(0,2).join(" ") }
+                      />
+                    </TableCell>
+                    <TableCell className="font-medium">{animal.f_nome}</TableCell>
+                    <TableCell className="italic">{animal.f_nomecientifico}</TableCell>
+                    <TableCell>{animal.f_classeNome}</TableCell>
+                    <TableCell>{animal.f_ordemNome}</TableCell>
+                    <TableCell>{animal.f_familiaNome}</TableCell>
+                    <TableCell>
+                      {animal.f_status_conservacao ? (
+                        <Badge variant={animal.f_status_conservacao.includes("Ameaçado") || animal.f_status_conservacao.includes("Perigo") || animal.f_status_conservacao === "CR" || animal.f_status_conservacao === "EN" || animal.f_status_conservacao === "VU" ? "destructive" : "secondary"}>
+                          {animal.f_status_conservacao}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">N/A</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right space-x-1">
+                      <Button variant="ghost" size="icon" asChild title="Visualizar">
+                        <Link href={`/animais/${animal.id}`}><Eye className="h-4 w-4" /></Link>
+                      </Button>
+                      <Button variant="ghost" size="icon" asChild title="Editar">
+                        <Link href={`/animais/${animal.id}/editar`}><Edit className="h-4 w-4" /></Link>
+                      </Button>
+                      <DeleteConfirmationButton
+                        itemId={animal.id}
+                        itemName={animal.f_nome}
+                        itemType="Animal (Espécie)"
+                        deleteAction={deleteAnimal}
+                        triggerButtonProps={{variant: "ghost", size: "icon", title: "Excluir"}}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center text-muted-foreground py-12">
+              <Squirrel className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Nenhuma espécie animal registrada ainda.</h3>
+              <p>Comece adicionando uma nova espécie.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
