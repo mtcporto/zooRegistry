@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A flow to fetch an animal image URL from the Pexels API.
@@ -48,10 +49,11 @@ const getAnimalImageFlow = ai.defineFlow(
     // We'll fetch only 1 image, and try to get a landscape one if possible for consistency.
     const url = `${PEXELS_API_BASE_URL}?query=${query}&per_page=1&orientation=landscape`;
 
-    console.log(`Fetching image from Pexels: ${url.replace(apiKey, "PEXELS_API_KEY_HIDDEN")}`); // Log URL without key
+    // Log URL without sensitive key for debugging, only if not in production
+    if (process.env.NODE_ENV !== 'production') {
+        console.log(`Fetching image from Pexels: ${PEXELS_API_BASE_URL}?query=${query}&per_page=1&orientation=landscape`);
+    }
 
-    // --- UNCOMMENT THIS SECTION TO MAKE ACTUAL API CALLS ---
-    /*
     try {
       const response = await fetch(url, {
         headers: {
@@ -86,10 +88,5 @@ const getAnimalImageFlow = ai.defineFlow(
       }
       return { imageUrl: null, errorMessage: message };
     }
-    */
-
-    // Placeholder return while API call is commented out
-    console.log(`Pexels API call for ${input.animalName} is currently commented out. Returning null.`);
-    return { imageUrl: null, errorMessage: "Pexels API call not active." };
   }
 );
