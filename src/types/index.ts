@@ -1,21 +1,19 @@
 
-// Remove Classe, Ordem, Familia interfaces
-
 export interface Animal {
   id: string;
   f_nomecientifico: string;
-  f_nome: string; // Nome vulgar
-  f_nomes_alternativos?: string;
-  f_imagem?: string;    // URL to image
-  f_status_conservacao?: string; // Ex: "Pouco Preocupante (LC)", "Ameaçado (EN)", "EN" (código IUCN)
+  f_nome: string; 
+  f_nomes_alternativos?: string | null;
+  f_imagem?: string | null;    
+  f_status_conservacao?: string | null; 
   
-  // Campos preenchidos pela API da IUCN
-  f_iucn_kingdomName?: string;
-  f_iucn_phylumName?: string;
-  f_iucn_className?: string;
-  f_iucn_orderName?: string;
-  f_iucn_familyName?: string;
-  f_iucn_commonNames?: string; // Nomes comuns concatenados
+  f_iucn_kingdomName?: string | null;
+  f_iucn_phylumName?: string | null;
+  f_iucn_className?: string | null;
+  f_iucn_orderName?: string | null;
+  f_iucn_familyName?: string | null;
+  f_iucn_commonNames?: string | null; 
+  "data-ai-hint"?: string | null;
 }
 
 export type SexoAnimal = 'Macho' | 'Femea' | 'Indefinido';
@@ -26,20 +24,20 @@ export const marcacaoTiposAnimais: MarcacaoTipoAnimal[] = ['Microchip', 'Microch
 
 export interface CadastroAnimal {
   id: string;
-  f_animalId: string; // Reference to Animal
-  f_animalNome?: string; // For display purposes (nome vulgar da espécie)
-  f_apelido?: string;
-  f_registro?: string;
-  f_procedencia?: string;
-  f_entrada?: string; // Store as ISO string (YYYY-MM-DD)
-  f_sexo?: SexoAnimal;
-  f_idade?: string;
-  f_sinais?: string;
-  f_marcacaotipo?: MarcacaoTipoAnimal;
-  f_marcacaonumero?: string;
-  f_saida?: string; // Store as ISO string (YYYY-MM-DD)
-  f_motivosaida?: string;
-  f_observacao?: string;
-  f_origem_trafico?: boolean;
-  f_informacoes_trafico?: string;
+  f_animalId: string; 
+  f_animalNome?: string | null; 
+  f_apelido?: string | null;
+  f_registro?: string | null;
+  f_procedencia?: string | null;
+  f_entrada?: string | null; 
+  f_sexo?: SexoAnimal | null;
+  f_idade?: string | null;
+  f_sinais?: string | null;
+  f_marcacaotipo?: MarcacaoTipoAnimal | null;
+  f_marcacaonumero?: string | null;
+  f_saida?: string | null; 
+  f_motivosaida?: string | null;
+  f_observacao?: string | null;
+  f_origem_trafico?: boolean | null; // Booleans are fine as is or null
+  f_informacoes_trafico?: string | null;
 }

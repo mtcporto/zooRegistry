@@ -2,11 +2,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { db } from "@/lib/firebase"; // Use Firestore db instance
+import { db } from "@/lib/firebase";
 import { collection, getDocs, getDoc, doc, addDoc, updateDoc, deleteDoc, query, where, Timestamp } from "firebase/firestore";
 import type { Animal } from "@/types";
-import { getConservationStatusAndTaxonomy } from "@/ai/flows/get-conservation-status-flow";
-import { getAnimalImage } from "@/ai/flows/get-animal-image-flow";
+import { getConservationStatusAndTaxonomy, type GetIUCNDataOutput } from "@/ai/flows/get-conservation-status-flow";
+import { getAnimalImage, type GetAnimalImageOutput } from "@/ai/flows/get-animal-image-flow";
 
 const ANIMAIS_COLLECTION = "animais";
 const CADASTROS_COLLECTION = "cadastros";
@@ -21,12 +21,9 @@ export async function getAnimais(): Promise<Animal[]> {
     return snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Animal));
   } catch (error: any) {
     console.error(`[FIRESTORE_ERROR:getAnimais] Failed to fetch from '${ANIMAIS_COLLECTION}' collection:`, error.code, error.message);
-    if (error.code === 'permission-denied') {
+    if (error.code === 'permission-denied' || error.message?.includes('permission-denied') || error.message?.includes('insufficient permissions')) {
         console.error("[FIRESTORE_ERROR:getAnimais] PERMISSION DENIED. Please check your Firestore security rules in the Firebase console. Public read access might be required for this collection.");
     }
-    // Depending on app requirements, you might want to throw the error
-    // or return an empty array to prevent the page from crashing.
-    // For now, returning empty to match previous behavior.
     return [];
   }
 }
@@ -45,7 +42,7 @@ export async function getAnimalById(id: string): Promise<Animal | undefined> {
     return undefined;
   } catch (error: any) {
     console.error(`[FIRESTORE_ERROR:getAnimalById] Failed to fetch document '${id}' from '${ANIMAIS_COLLECTION}':`, error.code, error.message);
-    if (error.code === 'permission-denied') {
+    if (error.code === 'permission-denied' || error.message?.includes('permission-denied') || error.message?.includes('insufficient permissions')) {
         console.error(`[FIRESTORE_ERROR:getAnimalById] PERMISSION DENIED for document '${id}'. Check Firestore security rules.`);
     }
     return undefined;
@@ -61,45 +58,43 @@ export async function addAnimal(formData: FormData): Promise<{ success: boolean;
 
   const nomeCientifico = formData.get("f_nomecientifico") as string;
   const nomeVulgar = formData.get("f_nome") as string;
-  const nomesAlternativos = formData.get("f_nomes_alternativos") as string | undefined;
+  
+  const nomesAlternativosForm = formData.get("f_nomes_alternativos") as string | null;
   const imagemUrlFromForm = formData.get("f_imagem") as string | null;
-  let statusConservacaoUser = formData.get("f_status_conservacao") as string | undefined;
+  const statusConservacaoUserForm = formData.get("f_status_conservacao") as string | null;
 
   if (!nomeCientifico) return { success: false, message: "Nome científico é obrigatório." };
   if (!nomeVulgar) return { success: false, message: "Nome vulgar é obrigatório." };
   
-  let iucnData: Awaited<ReturnType<typeof getConservationStatusAndTaxonomy>> = {
+  let iucnData: GetIUCNDataOutput = {
     status: null, kingdomName: null, phylumName: null, className: null, orderName: null, familyName: null, commonNames: null, errorMessage: undefined
   };
 
-  if (iucnKeyExists) {
+  if (iucnKeyExists && nomeCientifico) {
     console.log(`[AnimalAction_Add_Firestore] Attempting to fetch IUCN data for ${nomeCientifico}...`);
     try {
       iucnData = await getConservationStatusAndTaxonomy({ scientificName: nomeCientifico });
       console.log(`[AnimalAction_Add_Firestore] IUCN data for ${nomeCientifico} fetch response. Status: ${iucnData.status}, Class: ${iucnData.className}, Error: ${iucnData.errorMessage}`);
     } catch (e: any) {
-        console.error(`[AnimalAction_Add_Firestore] Error calling IUCN flow:`, e.message);
+        console.error(`[AnimalAction_Add_Firestore] Error calling IUCN flow:`, e.message, e);
+        iucnData.errorMessage = e.message;
     }
   } else {
-    console.log("[AnimalAction_Add_Firestore] IUCN_REDLIST_API_TOKEN not set. Skipping IUCN data fetch.");
+    console.log("[AnimalAction_Add_Firestore] IUCN_REDLIST_API_TOKEN not set or nomeCientifico missing. Skipping IUCN data fetch.");
   }
 
-  let finalImageToSave: string | undefined = "";
+  let finalImageToSave: string | null = (imagemUrlFromForm && imagemUrlFromForm.trim() !== "") ? imagemUrlFromForm.trim() : null;
   const searchTermForImage = nomeCientifico || nomeVulgar;
 
-  if (imagemUrlFromForm && imagemUrlFromForm.trim() !== "") {
-    finalImageToSave = imagemUrlFromForm.trim();
-  } else {
-    if (searchTermForImage && pexelsKeyExists) {
-      try {
-        const imageResult = await getAnimalImage({ animalName: searchTermForImage });
-        if (imageResult.imageUrl) {
-          finalImageToSave = imageResult.imageUrl;
-        }
-        console.log(`[AnimalAction_Add_Firestore] Pexels search for ${searchTermForImage}. Result: ${finalImageToSave}, Message: ${imageResult.errorMessage}`);
-      } catch (e: any) {
-        console.error(`[AnimalAction_Add_Firestore] Error calling Pexels flow:`, e.message);
+  if (!finalImageToSave && searchTermForImage && pexelsKeyExists) {
+    try {
+      const imageResult: GetAnimalImageOutput = await getAnimalImage({ animalName: searchTermForImage });
+      if (imageResult.imageUrl) {
+        finalImageToSave = imageResult.imageUrl;
       }
+      console.log(`[AnimalAction_Add_Firestore] Pexels search for ${searchTermForImage}. Result: ${finalImageToSave || 'none'}, Message: ${imageResult.errorMessage || 'none'}`);
+    } catch (e: any) {
+      console.error(`[AnimalAction_Add_Firestore] Error calling Pexels flow:`, e.message, e);
     }
   }
 
@@ -107,21 +102,23 @@ export async function addAnimal(formData: FormData): Promise<{ success: boolean;
     finalImageToSave = `https://placehold.co/300x200.png?text=${encodeURIComponent(nomeVulgar || 'Animal')}`;
   }
 
-  const finalStatus = (statusConservacaoUser && statusConservacaoUser.trim() !== "") ? statusConservacaoUser.trim().toUpperCase() : iucnData.status;
+  const finalStatusConservacao = (statusConservacaoUserForm && statusConservacaoUserForm.trim() !== "") 
+    ? statusConservacaoUserForm.trim().toUpperCase() 
+    : (iucnData.status || null);
 
   const newAnimalData: Omit<Animal, 'id'> = {
     f_nomecientifico: nomeCientifico,
     f_nome: nomeVulgar,
-    f_nomes_alternativos: nomesAlternativos || undefined,
-    f_imagem: finalImageToSave,
-    f_status_conservacao: finalStatus || undefined,
-    f_iucn_kingdomName: iucnData.kingdomName || undefined,
-    f_iucn_phylumName: iucnData.phylumName || undefined,
-    f_iucn_className: iucnData.className || undefined,
-    f_iucn_orderName: iucnData.orderName || undefined,
-    f_iucn_familyName: iucnData.familyName || undefined,
-    f_iucn_commonNames: iucnData.commonNames || undefined,
-    "data-ai-hint": nomeVulgar.toLowerCase().split(" ").slice(0,2).join(" ") || "animal photo",
+    f_nomes_alternativos: (nomesAlternativosForm && nomesAlternativosForm.trim() !== "") ? nomesAlternativosForm.trim() : null,
+    f_imagem: finalImageToSave, // Already string or null
+    f_status_conservacao: finalStatusConservacao, // Already string or null
+    f_iucn_kingdomName: iucnData.kingdomName || null,
+    f_iucn_phylumName: iucnData.phylumName || null,
+    f_iucn_className: iucnData.className || null,
+    f_iucn_orderName: iucnData.orderName || null,
+    f_iucn_familyName: iucnData.familyName || null,
+    f_iucn_commonNames: iucnData.commonNames || null,
+    "data-ai-hint": (nomeVulgar ? nomeVulgar.toLowerCase().split(" ").slice(0,2).join(" ") : "animal") || "animal photo",
   };
   
   try {
@@ -130,11 +127,13 @@ export async function addAnimal(formData: FormData): Promise<{ success: boolean;
     revalidatePath("/", "layout");
     return { success: true, message: "Animal (espécie) adicionado com sucesso ao Firestore!", data: { id: docRef.id, ...newAnimalData } };
   } catch (error: any) {
-    console.error(`[FIRESTORE_ERROR:addAnimal] Failed to add document to '${ANIMAIS_COLLECTION}':`, error.code, error.message);
-     if (error.code === 'permission-denied') {
-        console.error(`[FIRESTORE_ERROR:addAnimal] PERMISSION DENIED. Check Firestore security rules for write access.`);
+    console.error(`[FIRESTORE_ERROR:addAnimal] Failed to add document to '${ANIMAIS_COLLECTION}':`, error.code || 'N/A', error.message || 'No message', error);
+     if (error.code === 'permission-denied' || error.message?.includes('permission-denied') || error.message?.includes('insufficient permissions')) {
+        console.error(`[FIRESTORE_ERROR:addAnimal] PERMISSION DENIED. Check Firestore security rules for write access to collection '${ANIMAIS_COLLECTION}'.`);
+    } else if (error.code === 'invalid-argument' || error.message?.includes('invalid-argument')) {
+        console.error(`[FIRESTORE_ERROR:addAnimal] INVALID ARGUMENT. Often due to undefined field values. Data being sent:`, JSON.stringify(newAnimalData, null, 2));
     }
-    return { success: false, message: "Erro ao adicionar animal (espécie) ao Firestore." };
+    return { success: false, message: `Erro ao adicionar animal (espécie) ao Firestore: ${error.message}` };
   }
 }
 
@@ -144,9 +143,9 @@ export async function updateAnimal(id: string, formData: FormData): Promise<{ su
 
   const nomeCientifico = formData.get("f_nomecientifico") as string;
   const nomeVulgar = formData.get("f_nome") as string;
-  const nomesAlternativos = formData.get("f_nomes_alternativos") as string | undefined;
+  const nomesAlternativosForm = formData.get("f_nomes_alternativos") as string | null;
   const imagemUrlFromForm = formData.get("f_imagem") as string | null;
-  let statusConservacaoUser = formData.get("f_status_conservacao") as string | undefined;
+  const statusConservacaoUserForm = formData.get("f_status_conservacao") as string | null;
   const rebuscarIUCN = formData.get("f_rebuscar_iucn") === "true";
 
   if (!id) return { success: false, message: "ID do animal é obrigatório para atualização." };
@@ -162,80 +161,80 @@ export async function updateAnimal(id: string, formData: FormData): Promise<{ su
     }
     const animalOriginal = animalOriginalSnap.data() as Animal;
 
-    let iucnDataResult = {
-      status: animalOriginal.f_status_conservacao,
-      kingdomName: animalOriginal.f_iucn_kingdomName,
-      phylumName: animalOriginal.f_iucn_phylumName,
-      className: animalOriginal.f_iucn_className,
-      orderName: animalOriginal.f_iucn_orderName,
-      familyName: animalOriginal.f_iucn_familyName,
-      commonNames: animalOriginal.f_iucn_commonNames,
+    let iucnDataResult: Partial<GetIUCNDataOutput> = {
+      status: animalOriginal.f_status_conservacao || null,
+      kingdomName: animalOriginal.f_iucn_kingdomName || null,
+      phylumName: animalOriginal.f_iucn_phylumName || null,
+      className: animalOriginal.f_iucn_className || null,
+      orderName: animalOriginal.f_iucn_orderName || null,
+      familyName: animalOriginal.f_iucn_familyName || null,
+      commonNames: animalOriginal.f_iucn_commonNames || null,
     };
 
-    if (iucnKeyExists && (rebuscarIUCN || (animalOriginal.f_nomecientifico !== nomeCientifico && !statusConservacaoUser))) {
+    if (iucnKeyExists && nomeCientifico && (rebuscarIUCN || (animalOriginal.f_nomecientifico !== nomeCientifico && !statusConservacaoUserForm))) {
       console.log(`[AnimalAction_Update_Firestore] Re-fetching IUCN data for ${nomeCientifico}`);
       try {
         const fetchedIUCN = await getConservationStatusAndTaxonomy({ scientificName: nomeCientifico });
         iucnDataResult = {
-            status: fetchedIUCN.status, 
-            kingdomName: fetchedIUCN.kingdomName,
-            phylumName: fetchedIUCN.phylumName,
-            className: fetchedIUCN.className,
-            orderName: fetchedIUCN.orderName,
-            familyName: fetchedIUCN.familyName,
-            commonNames: fetchedIUCN.commonNames,
+            status: fetchedIUCN.status || iucnDataResult.status, 
+            kingdomName: fetchedIUCN.kingdomName || iucnDataResult.kingdomName,
+            phylumName: fetchedIUCN.phylumName || iucnDataResult.phylumName,
+            className: fetchedIUCN.className || iucnDataResult.className,
+            orderName: fetchedIUCN.orderName || iucnDataResult.orderName,
+            familyName: fetchedIUCN.familyName || iucnDataResult.familyName,
+            commonNames: fetchedIUCN.commonNames || iucnDataResult.commonNames,
         };
         console.log(`[AnimalAction_Update_Firestore] IUCN re-fetch for ${nomeCientifico}. Status: ${iucnDataResult.status}, Class: ${iucnDataResult.className}, Error: ${fetchedIUCN.errorMessage}`);
       } catch (e: any) {
-          console.error(`[AnimalAction_Update_Firestore] Error re-fetching IUCN data:`, e.message);
+          console.error(`[AnimalAction_Update_Firestore] Error re-fetching IUCN data:`, e.message, e);
       }
     }
 
-    let finalImageToSave: string | undefined = animalOriginal.f_imagem;
-    let attemptPexelsSearch = false;
+    let finalImageToSave: string | null = animalOriginal.f_imagem || null;
     const searchTermForImage = nomeCientifico || nomeVulgar;
 
-    if (imagemUrlFromForm && imagemUrlFromForm.trim() !== "") {
-      if (imagemUrlFromForm.trim() !== animalOriginal.f_imagem) {
-          finalImageToSave = imagemUrlFromForm.trim();
-      }
-    } else if (typeof imagemUrlFromForm === 'string' && imagemUrlFromForm.trim() === "") {
-      attemptPexelsSearch = true;
-    } else if (!animalOriginal.f_imagem && imagemUrlFromForm === null) {
-      attemptPexelsSearch = true;
+    if (imagemUrlFromForm !== null) { // User provided something (empty string or URL)
+        if (imagemUrlFromForm.trim() !== "" && imagemUrlFromForm.trim() !== animalOriginal.f_imagem) {
+            finalImageToSave = imagemUrlFromForm.trim();
+        } else if (imagemUrlFromForm.trim() === "") { // User explicitly cleared the field
+            finalImageToSave = null; // Allow Pexels search
+        }
     }
 
-    if (attemptPexelsSearch && searchTermForImage && pexelsKeyExists) {
+
+    if (finalImageToSave === null && searchTermForImage && pexelsKeyExists) {
       try {
         const imageResult = await getAnimalImage({ animalName: searchTermForImage });
         if (imageResult.imageUrl) {
           finalImageToSave = imageResult.imageUrl;
         }
-        console.log(`[AnimalAction_Update_Firestore] Pexels search for ${searchTermForImage}. Result: ${finalImageToSave}, Message: ${imageResult.errorMessage}`);
+         console.log(`[AnimalAction_Update_Firestore] Pexels search for ${searchTermForImage}. Result: ${finalImageToSave || 'none'}, Message: ${imageResult.errorMessage || 'none'}`);
       } catch (e: any) {
-        console.error(`[AnimalAction_Update_Firestore] Error calling Pexels flow:`, e.message);
+        console.error(`[AnimalAction_Update_Firestore] Error calling Pexels flow:`, e.message, e);
       }
     }
     
-    if (attemptPexelsSearch && !finalImageToSave) { 
+    if (finalImageToSave === null) { // Fallback if Pexels fails or was not called
         finalImageToSave = `https://placehold.co/300x200.png?text=${encodeURIComponent(nomeVulgar || 'Animal')}`;
     }
     
-    const finalStatus = (statusConservacaoUser && statusConservacaoUser.trim() !== "") ? statusConservacaoUser.trim().toUpperCase() : iucnDataResult.status;
+    const finalStatusConservacao = (statusConservacaoUserForm && statusConservacaoUserForm.trim() !== "") 
+        ? statusConservacaoUserForm.trim().toUpperCase() 
+        : (iucnDataResult.status || null);
 
     const updatedAnimalData = {
       f_nomecientifico: nomeCientifico,
       f_nome: nomeVulgar,
-      f_nomes_alternativos: nomesAlternativos || animalOriginal.f_nomes_alternativos || undefined,
+      f_nomes_alternativos: (nomesAlternativosForm && nomesAlternativosForm.trim() !== "") ? nomesAlternativosForm.trim() : null,
       f_imagem: finalImageToSave,
-      f_status_conservacao: finalStatus || undefined,
-      f_iucn_kingdomName: iucnDataResult.kingdomName || undefined,
-      f_iucn_phylumName: iucnDataResult.phylumName || undefined,
-      f_iucn_className: iucnDataResult.className || undefined,
-      f_iucn_orderName: iucnDataResult.orderName || undefined,
-      f_iucn_familyName: iucnDataResult.familyName || undefined,
-      f_iucn_commonNames: iucnDataResult.commonNames || undefined,
-      "data-ai-hint": nomeVulgar.toLowerCase().split(" ").slice(0,2).join(" ") || "animal photo",
+      f_status_conservacao: finalStatusConservacao,
+      f_iucn_kingdomName: iucnDataResult.kingdomName || null,
+      f_iucn_phylumName: iucnDataResult.phylumName || null,
+      f_iucn_className: iucnDataResult.className || null,
+      f_iucn_orderName: iucnDataResult.orderName || null,
+      f_iucn_familyName: iucnDataResult.familyName || null,
+      f_iucn_commonNames: iucnDataResult.commonNames || null,
+      "data-ai-hint": (nomeVulgar ? nomeVulgar.toLowerCase().split(" ").slice(0,2).join(" ") : "animal") || "animal photo",
     };
 
     await updateDoc(animalDocRef, updatedAnimalData);
@@ -245,13 +244,15 @@ export async function updateAnimal(id: string, formData: FormData): Promise<{ su
     revalidatePath(`/animais/${id}/editar`, "layout");
     revalidatePath("/", "layout");
 
-    return { success: true, message: "Animal (espécie) atualizado com sucesso no Firestore!", data: { id, ...updatedAnimalData } };
+    return { success: true, message: "Animal (espécie) atualizado com sucesso no Firestore!", data: { id, ...updatedAnimalData } as Animal };
   } catch (error: any) {
-    console.error(`[FIRESTORE_ERROR:updateAnimal] Failed to update document '${id}' in '${ANIMAIS_COLLECTION}':`, error.code, error.message);
-     if (error.code === 'permission-denied') {
+    console.error(`[FIRESTORE_ERROR:updateAnimal] Failed to update document '${id}' in '${ANIMAIS_COLLECTION}':`, error.code || 'N/A', error.message || 'No message', error);
+     if (error.code === 'permission-denied' || error.message?.includes('permission-denied') || error.message?.includes('insufficient permissions')) {
         console.error(`[FIRESTORE_ERROR:updateAnimal] PERMISSION DENIED for document '${id}'. Check Firestore security rules.`);
+    } else if (error.code === 'invalid-argument' || error.message?.includes('invalid-argument')) {
+        console.error(`[FIRESTORE_ERROR:updateAnimal] INVALID ARGUMENT. Often due to undefined field values. Data being sent:`, JSON.stringify(updatedAnimalData, null, 2));
     }
-    return { success: false, message: "Erro ao atualizar animal (espécie) no Firestore." };
+    return { success: false, message: `Erro ao atualizar animal (espécie) no Firestore: ${error.message}` };
   }
 }
 
@@ -275,10 +276,10 @@ export async function deleteAnimal(id: string): Promise<{ success: boolean; mess
     return { success: true, message: "Animal (espécie) excluído com sucesso do Firestore!" };
   } catch (error: any) {
     console.error(`[FIRESTORE_ERROR:deleteAnimal] Failed to delete document '${id}' from '${ANIMAIS_COLLECTION}':`, error.code, error.message);
-    if (error.code === 'permission-denied') {
+    if (error.code === 'permission-denied' || error.message?.includes('permission-denied') || error.message?.includes('insufficient permissions')) {
         console.error(`[FIRESTORE_ERROR:deleteAnimal] PERMISSION DENIED for document '${id}'. Check Firestore security rules.`);
     }
-    return { success: false, message: "Erro ao excluir animal (espécie) do Firestore." };
+    return { success: false, message: `Erro ao excluir animal (espécie) do Firestore: ${error.message}` };
   }
 }
 
