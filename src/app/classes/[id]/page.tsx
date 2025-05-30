@@ -1,12 +1,14 @@
 
-import { getClassById } from "@/lib/actions/classeActions";
+import { getClassById, deleteClasse } from "@/lib/actions/classeActions";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { DeleteConfirmationButton } from "@/components/DeleteConfirmationButton";
+import { redirect } from 'next/navigation'; // For client-side redirect after delete
 
 export default async function ClasseDetailPage({ params }: { params: { id: string } }) {
   const classe = await getClassById(params.id);
@@ -26,17 +28,33 @@ export default async function ClasseDetailPage({ params }: { params: { id: strin
 
   return (
     <div className="container mx-auto p-4 md:p-8">
-      <div className="mb-6">
+      <div className="mb-6 flex justify-between items-center">
         <Button variant="outline" asChild>
           <Link href="/classes">
             <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Classes
           </Link>
         </Button>
+        <div className="space-x-2">
+            <Button variant="outline" asChild>
+                <Link href={`/classes/${classe.id}/editar`}>
+                    <Edit className="mr-2 h-4 w-4" /> Editar Classe
+                </Link>
+            </Button>
+            <DeleteConfirmationButton
+                itemId={classe.id}
+                itemName={classe.f_nome}
+                itemType="Classe"
+                deleteAction={deleteClasse}
+                onSuccess={() => redirect('/classes')}
+                triggerButtonProps={{variant: "destructive"}}
+                triggerIcon={<><Trash2 className="mr-2 h-4 w-4" /> Excluir Classe</>}
+            />
+        </div>
       </div>
       
       <Card className="overflow-hidden shadow-xl">
         {classe.f_hero && (
-          <div className="relative w-full h-64 md:h-96">
+          <div className="relative w-full h-64 md:h-96 bg-muted">
             <Image
               src={classe.f_hero}
               alt={`${classe.f_nome} Hero Image`}
@@ -68,10 +86,7 @@ export default async function ClasseDetailPage({ params }: { params: { id: strin
              <Badge variant="secondary">ID: {classe.id}</Badge>
            </div>
         </CardContent>
-        <CardFooter>
-           {/* Placeholder for edit button */}
-          <Button variant="outline" disabled>Editar Classe (Em breve)</Button>
-        </CardFooter>
+        {/* Footer can be removed if actions are at the top */}
       </Card>
     </div>
   );

@@ -1,6 +1,6 @@
 
 import { PageHeader } from "@/components/PageHeader";
-import { getOrdens } from "@/lib/actions/ordemActions";
+import { getOrdens, deleteOrdem } from "@/lib/actions/ordemActions";
 import {
   Table,
   TableBody,
@@ -14,7 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Eye, Edit, Trash2 } from "lucide-react";
+import { Eye, Edit, Trash2, Binary } from "lucide-react"; // Using Binary as placeholder icon
+import { DeleteConfirmationButton } from "@/components/DeleteConfirmationButton";
 
 export default async function OrdensPage() {
   const ordens = await getOrdens();
@@ -40,7 +41,7 @@ export default async function OrdensPage() {
                   <TableHead>Nome</TableHead>
                   <TableHead>Classe</TableHead>
                   <TableHead>Descrição</TableHead>
-                  <TableHead className="text-right w-[150px]">Ações</TableHead>
+                  <TableHead className="text-right w-[180px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -59,23 +60,31 @@ export default async function OrdensPage() {
                     <TableCell className="font-medium">{ordem.f_nome}</TableCell>
                     <TableCell>{ordem.f_classeNome || "N/A"}</TableCell>
                     <TableCell className="max-w-xs truncate">{ordem.f_descricao || "N/A"}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right space-x-1">
                       <Button variant="ghost" size="icon" asChild title="Visualizar">
                         <Link href={`/ordens/${ordem.id}`}><Eye className="h-4 w-4" /></Link>
                       </Button>
-                      <Button variant="ghost" size="icon" disabled title="Editar (Em breve)">
-                        <Edit className="h-4 w-4" />
+                      <Button variant="ghost" size="icon" asChild title="Editar">
+                        <Link href={`/ordens/${ordem.id}/editar`}><Edit className="h-4 w-4" /></Link>
                       </Button>
-                      <Button variant="ghost" size="icon" disabled title="Excluir (Em breve)" className="text-destructive hover:text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <DeleteConfirmationButton
+                        itemId={ordem.id}
+                        itemName={ordem.f_nome}
+                        itemType="Ordem"
+                        deleteAction={deleteOrdem}
+                        triggerButtonProps={{variant: "ghost", size: "icon", title: "Excluir"}}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           ) : (
-            <p className="text-center text-muted-foreground py-8">Nenhuma ordem registrada ainda.</p>
+            <div className="text-center text-muted-foreground py-12">
+                <Binary className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-xl font-semibold mb-2">Nenhuma ordem registrada ainda.</h3>
+                <p>Comece adicionando uma nova ordem.</p>
+            </div>
           )}
         </CardContent>
       </Card>

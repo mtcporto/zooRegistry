@@ -21,14 +21,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Classe } from "@/types";
-import { addClasse } from "@/lib/actions/classeActions";
+import { addClasse, updateClasse } from "@/lib/actions/classeActions";
 import { SubmitButton } from "./SubmitButton";
 
 const formSchema = z.object({
   f_nome: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres." }).max(100),
-  f_descricao: z.string().max(500).optional(),
-  f_imagem: z.string().url({ message: "Por favor, insira uma URL válida para a imagem." }).optional().or(z.literal('')),
-  f_hero: z.string().url({ message: "Por favor, insira uma URL válida para a imagem hero." }).optional().or(z.literal('')),
+  f_descricao: z.string().max(500).optional().nullable(),
+  f_imagem: z.string().url({ message: "Por favor, insira uma URL válida para a imagem." }).optional().or(z.literal('')).nullable(),
+  f_hero: z.string().url({ message: "Por favor, insira uma URL válida para a imagem hero." }).optional().or(z.literal('')).nullable(),
 });
 
 type ClasseFormValues = z.infer<typeof formSchema>;
@@ -43,7 +43,12 @@ export function ClasseForm({ initialData }: ClasseFormProps) {
 
   const form = useForm<ClasseFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: initialData || {
+    defaultValues: initialData ? {
+        f_nome: initialData.f_nome || "",
+        f_descricao: initialData.f_descricao || "",
+        f_imagem: initialData.f_imagem || "",
+        f_hero: initialData.f_hero || "",
+    } : {
       f_nome: "",
       f_descricao: "",
       f_imagem: "",
@@ -58,10 +63,12 @@ export function ClasseForm({ initialData }: ClasseFormProps) {
     if (values.f_imagem) formData.append("f_imagem", values.f_imagem);
     if (values.f_hero) formData.append("f_hero", values.f_hero);
     
-    // TODO: Add data-ai-hint based on f_nome if f_imagem or f_hero are provided
-    // For example: (newClasse as any)['data-ai-hint'] = values.f_nome.toLowerCase().split(" ")[0];
-
-    const result = await addClasse(formData);
+    let result;
+    if (initialData?.id) {
+      result = await updateClasse(initialData.id, formData);
+    } else {
+      result = await addClasse(formData);
+    }
 
     if (result.success) {
       toast({
@@ -69,7 +76,7 @@ export function ClasseForm({ initialData }: ClasseFormProps) {
         description: result.message,
       });
       router.push("/classes");
-      router.refresh(); // Ensure the list is updated
+      router.refresh(); 
     } else {
       toast({
         title: "Erro",
@@ -106,9 +113,9 @@ export function ClasseForm({ initialData }: ClasseFormProps) {
               name="f_descricao"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Descrição</FormLabel>
+                  <FormLabel>Descrição (Opcional)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Descreva brevemente a classe..." {...field} />
+                    <Textarea placeholder="Descreva brevemente a classe..." {...field} value={field.value ?? ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -121,7 +128,7 @@ export function ClasseForm({ initialData }: ClasseFormProps) {
                 <FormItem>
                   <FormLabel>URL da Imagem (Opcional)</FormLabel>
                   <FormControl>
-                    <Input type="url" placeholder="https://exemplo.com/imagem.png" {...field} />
+                    <Input type="url" placeholder="https://exemplo.com/imagem.png" {...field} value={field.value ?? ""} />
                   </FormControl>
                   <FormDescription>Link para uma imagem representativa da classe.</FormDescription>
                   <FormMessage />
@@ -135,7 +142,7 @@ export function ClasseForm({ initialData }: ClasseFormProps) {
                 <FormItem>
                   <FormLabel>URL da Imagem Hero (Opcional)</FormLabel>
                   <FormControl>
-                    <Input type="url" placeholder="https://exemplo.com/hero.png" {...field} />
+                    <Input type="url" placeholder="https://exemplo.com/hero.png" {...field} value={field.value ?? ""} />
                   </FormControl>
                   <FormDescription>Link para uma imagem de destaque (banner) para a classe.</FormDescription>
                   <FormMessage />

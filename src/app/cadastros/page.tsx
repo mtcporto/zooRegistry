@@ -1,14 +1,15 @@
 
 import { PageHeader } from "@/components/PageHeader";
-import { getCadastros } from "@/lib/actions/cadastroActions";
+import { getCadastros, deleteCadastro } from "@/lib/actions/cadastroActions"; // Assuming deleteCadastro exists
 import type { CadastroAnimal } from "@/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Eye, Edit, Trash2, PawPrint } from "lucide-react"; // PawPrint as general animal icon
+import { Eye, Edit, Trash2, PawPrint } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { DeleteConfirmationButton } from "@/components/DeleteConfirmationButton";
 
 export default async function CadastrosPage() {
   const cadastros = await getCadastros();
@@ -31,7 +32,11 @@ export default async function CadastrosPage() {
                    </CardTitle>
                    {cadastro.f_sexo && <Badge variant={cadastro.f_sexo === 'Macho' ? 'default' : cadastro.f_sexo === 'Femea' ? 'destructive' : 'secondary'} className="capitalize">{cadastro.f_sexo}</Badge>}
                 </div>
-                <CardDescription className="italic">{cadastro.f_animalNome}</CardDescription>
+                <CardDescription className="italic">
+                  <Link href={`/animais/${cadastro.f_animalId}`} className="hover:underline" title={`Ver espécie ${cadastro.f_animalNome}`}>
+                    {cadastro.f_animalNome}
+                  </Link>
+                </CardDescription>
               </CardHeader>
               <CardContent className="flex-grow space-y-1 text-sm pt-4">
                 {cadastro.f_registro && <p><Badge variant="outline">Registro:</Badge> {cadastro.f_registro}</p>}
@@ -39,10 +44,22 @@ export default async function CadastrosPage() {
                 {cadastro.f_idade && <p><Badge variant="outline">Idade:</Badge> {cadastro.f_idade}</p>}
                 {cadastro.f_marcacaotipo && <p><Badge variant="outline">Marcação:</Badge> {cadastro.f_marcacaotipo} {cadastro.f_marcacaonumero && `(${cadastro.f_marcacaonumero})`}</p>}
               </CardContent>
-              <CardFooter className="border-t pt-4 flex justify-end gap-2">
-                <Button variant="ghost" size="sm" asChild title="Visualizar">
-                  <Link href={`/cadastros/${cadastro.id}`}><Eye className="mr-1 h-4 w-4" /> Ver Detalhes</Link>
+              <CardFooter className="border-t pt-4 flex justify-between items-center gap-2">
+                 <Button variant="ghost" size="sm" asChild title="Visualizar">
+                  <Link href={`/cadastros/${cadastro.id}`}><Eye className="mr-1 h-4 w-4" /> Detalhes</Link>
                 </Button>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="icon" asChild title="Editar (Em breve)">
+                    <Link href={`/cadastros/${cadastro.id}/editar`}><Edit className="h-4 w-4" /></Link>
+                  </Button>
+                  <DeleteConfirmationButton
+                    itemId={cadastro.id}
+                    itemName={cadastro.f_apelido || `Registro ${cadastro.f_registro}` || `Animal ${cadastro.id}`}
+                    itemType="Cadastro Individual"
+                    deleteAction={deleteCadastro} // Placeholder: deleteCadastro needs to be created
+                    triggerButtonProps={{variant: "ghost", size: "icon", title: "Excluir (Em breve)"}}
+                  />
+                </div>
               </CardFooter>
             </Card>
           ))}

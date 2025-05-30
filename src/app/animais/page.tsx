@@ -1,13 +1,14 @@
 
 import { PageHeader } from "@/components/PageHeader";
-import { getAnimais } from "@/lib/actions/animalActions";
+import { getAnimais, deleteAnimal } from "@/lib/actions/animalActions"; // Assuming deleteAnimal exists
 import type { Animal } from "@/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { Eye, Edit, Trash2 } from "lucide-react";
+import { Eye, Edit, Trash2, Squirrel } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { DeleteConfirmationButton } from "@/components/DeleteConfirmationButton";
 
 export default async function AnimaisPage() {
   const animais = await getAnimais();
@@ -50,10 +51,17 @@ export default async function AnimaisPage() {
                 <Button variant="ghost" size="sm" asChild title="Visualizar">
                   <Link href={`/animais/${animal.id}`}><Eye className="mr-1 h-4 w-4" /> Ver</Link>
                 </Button>
-                {/* Placeholder for Edit/Delete actions */}
-                <Button variant="ghost" size="sm" disabled title="Editar (Em breve)">
-                  <Edit className="mr-1 h-4 w-4" /> Editar
+                <Button variant="ghost" size="sm" asChild title="Editar (Em breve)">
+                  <Link href={`/animais/${animal.id}/editar`}><Edit className="mr-1 h-4 w-4" /> Editar</Link>
                 </Button>
+                 <DeleteConfirmationButton
+                    itemId={animal.id}
+                    itemName={animal.f_nome}
+                    itemType="Animal (Espécie)"
+                    deleteAction={deleteAnimal} // Placeholder: deleteAnimal needs to be created
+                    triggerButtonProps={{variant: "ghost", size: "sm", title: "Excluir (Em breve)"}}
+                    triggerIcon={<><Trash2 className="mr-1 h-4 w-4" /> Excluir</>}
+                  />
               </CardFooter>
             </Card>
           ))}

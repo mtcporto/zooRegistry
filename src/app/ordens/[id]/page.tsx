@@ -1,12 +1,14 @@
 
-import { getOrdemById } from "@/lib/actions/ordemActions";
+import { getOrdemById, deleteOrdem } from "@/lib/actions/ordemActions";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { DeleteConfirmationButton } from "@/components/DeleteConfirmationButton";
+import { redirect } from 'next/navigation';
 
 export default async function OrdemDetailPage({ params }: { params: { id: string } }) {
   const ordem = await getOrdemById(params.id);
@@ -26,17 +28,33 @@ export default async function OrdemDetailPage({ params }: { params: { id: string
 
   return (
     <div className="container mx-auto p-4 md:p-8">
-      <div className="mb-6">
+      <div className="mb-6 flex justify-between items-center">
         <Button variant="outline" asChild>
           <Link href="/ordens">
             <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Ordens
           </Link>
         </Button>
+         <div className="space-x-2">
+            <Button variant="outline" asChild>
+                <Link href={`/ordens/${ordem.id}/editar`}>
+                    <Edit className="mr-2 h-4 w-4" /> Editar Ordem
+                </Link>
+            </Button>
+            <DeleteConfirmationButton
+                itemId={ordem.id}
+                itemName={ordem.f_nome}
+                itemType="Ordem"
+                deleteAction={deleteOrdem}
+                onSuccess={() => redirect('/ordens')}
+                triggerButtonProps={{variant: "destructive"}}
+                triggerIcon={<><Trash2 className="mr-2 h-4 w-4" /> Excluir Ordem</>}
+            />
+        </div>
       </div>
       
       <Card className="overflow-hidden shadow-xl">
         {ordem.f_hero && (
-          <div className="relative w-full h-64 md:h-96">
+          <div className="relative w-full h-64 md:h-96 bg-muted">
             <Image
               src={ordem.f_hero}
               alt={`${ordem.f_nome} Hero Image`}
@@ -69,9 +87,7 @@ export default async function OrdemDetailPage({ params }: { params: { id: string
              <Badge variant="secondary">ID: {ordem.id}</Badge>
            </div>
         </CardContent>
-        <CardFooter>
-          <Button variant="outline" disabled>Editar Ordem (Em breve)</Button>
-        </CardFooter>
+        {/* Footer can be removed */}
       </Card>
     </div>
   );
