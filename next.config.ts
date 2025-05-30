@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
-      { // Added for Pexels
+      { 
         protocol: 'https',
         hostname: 'images.pexels.com',
         port: '',
@@ -32,7 +32,8 @@ const nextConfig: NextConfig = {
       'https://*.cloudworkstations.dev', // General for cloud workstations
       'http://localhost:3000', // Common local dev port
       'http://localhost:9002', // Current dev server port
-      // Add specific origins from logs if the wildcard above is not sufficient or too broad
+      'http://0.0.0.0:9002',    // Allow any IPv4 address on port 9002
+      // Specific origins from logs
       'https://6000-firebase-studio-1748578760704.cluster-m7tpz3bmgjgoqrktlvd4ykrc2m.cloudworkstations.dev',
       'https://9000-firebase-studio-1748578760704.cluster-m7tpz3bmgjgoqrktlvd4ykrc2m.cloudworkstations.dev',
     ],

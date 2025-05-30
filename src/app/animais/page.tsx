@@ -53,13 +53,13 @@ export default async function AnimaisPage() {
                 {animais.map((animal) => (
                   <TableRow key={animal.id}>
                     <TableCell>
-                      <div className="relative w-[100px] h-[60px]">
+                      <div className="relative w-[80px] h-[60px] bg-muted rounded">
                         <Image
-                          src={animal.f_imagem || "https://placehold.co/100x60.png?text=Sem+Imagem"}
+                          src={animal.f_imagem || "https://placehold.co/100x60.png?text=S/Foto"}
                           alt={animal.f_nome}
                           fill
-                          sizes="100px"
-                          className="rounded object-cover"
+                          sizes="80px"
+                          className="rounded object-contain"
                           data-ai-hint={ (animal as any)['data-ai-hint'] || animal.f_nome.toLowerCase().split(" ").slice(0,2).join(" ") }
                         />
                       </div>

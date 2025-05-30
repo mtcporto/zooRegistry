@@ -22,7 +22,7 @@ export default async function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {animais.map((animal) => (
             <Card key={animal.id} className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <div className="relative w-full h-48">
+              <div className="relative w-full h-48 bg-muted">
                 <Image
                   src={animal.f_imagem || "https://placehold.co/400x300.png?text=Sem+Imagem"}
                   alt={animal.f_nome}

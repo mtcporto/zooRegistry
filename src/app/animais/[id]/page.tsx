@@ -44,7 +44,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
               alt={`${animal.f_nome} - ${animal.f_nomecientifico}`}
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              className="object-contain"
+              className="object-contain" // Changed from object-cover to object-contain for better detail view
               data-ai-hint={ (animal as any)['data-ai-hint'] || animal.f_nome.toLowerCase().split(" ").slice(0,2).join(" ") }
             />
           </div>
@@ -102,7 +102,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
              <Badge variant="secondary">ID da Espécie: {animal.id}</Badge>
            </div>
         </CardContent>
-        <CardFooter className="flex justify-between items-center">
+        <CardFooter className="flex justify-between items-center border-t mt-4 pt-4">
           <Button variant="outline" asChild>
             <Link href={`/animais/${animal.id}/editar`}>
               <Edit className="mr-2 h-4 w-4" /> Editar Espécie
