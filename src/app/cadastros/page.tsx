@@ -39,10 +39,10 @@ export default async function CadastrosPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex-grow space-y-1 text-sm pt-4">
-                {cadastro.f_registro && <p><Badge variant="outline">Registro:</Badge> {cadastro.f_registro}</p>}
-                {cadastro.f_entrada && <p><Badge variant="outline">Entrada:</Badge> {format(parseISO(cadastro.f_entrada), "dd/MM/yyyy", { locale: ptBR })}</p>}
-                {cadastro.f_idade && <p><Badge variant="outline">Idade:</Badge> {cadastro.f_idade}</p>}
-                {cadastro.f_marcacaotipo && <p><Badge variant="outline">Marcação:</Badge> {cadastro.f_marcacaotipo} {cadastro.f_marcacaonumero && `(${cadastro.f_marcacaonumero})`}</p>}
+                {cadastro.f_registro && <div><Badge variant="outline">Registro:</Badge> {cadastro.f_registro}</div>}
+                {cadastro.f_entrada && <div><Badge variant="outline">Entrada:</Badge> {format(parseISO(cadastro.f_entrada), "dd/MM/yyyy", { locale: ptBR })}</div>}
+                {cadastro.f_idade && <div><Badge variant="outline">Idade:</Badge> {cadastro.f_idade}</div>}
+                {cadastro.f_marcacaotipo && <div><Badge variant="outline">Marcação:</Badge> {cadastro.f_marcacaotipo} {cadastro.f_marcacaonumero && `(${cadastro.f_marcacaonumero})`}</div>}
                 {cadastro.f_origem_trafico && <Badge variant="destructive" className="mt-1">Origem: Tráfico</Badge>}
               </CardContent>
               <CardFooter className="border-t pt-4 flex justify-between items-center gap-2">
