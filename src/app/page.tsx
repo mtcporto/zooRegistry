@@ -1,14 +1,14 @@
 
 import { PageHeader } from "@/components/PageHeader";
-import { getAnimais, deleteAnimal } from "@/lib/actions/animalActions"; 
+import { getAnimais } from "@/lib/actions/animalActions"; 
 import type { Animal } from "@/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { Eye, Edit, Trash2, Squirrel } from "lucide-react";
+import { Eye, Squirrel } from "lucide-react"; // Removed Edit, Trash2
 import { Badge } from "@/components/ui/badge";
-import { DeleteConfirmationButton } from "@/components/DeleteConfirmationButton";
+// DeleteConfirmationButton is no longer needed on this page
 
 export default async function HomePage() {
   const animais = await getAnimais();
@@ -16,7 +16,7 @@ export default async function HomePage() {
   return (
     <div className="container mx-auto p-4 md:p-8">
       <PageHeader
-        title="Animais Registrados no Plantel"
+        title="Visão Geral do Plantel"
         description="Navegue pelas espécies de animais cadastradas no sistema."
         // No actionButton here, new animals are added via /animais/novo (accessed from /animais or sidebar)
       />
@@ -41,7 +41,13 @@ export default async function HomePage() {
                 <div><Badge variant="outline">Classe:</Badge> {animal.f_classeNome}</div>
                 <div><Badge variant="outline">Ordem:</Badge> {animal.f_ordemNome}</div>
                 <div><Badge variant="outline">Família:</Badge> {animal.f_familiaNome}</div>
-                {animal.f_status_conservacao && <div><Badge variant={animal.f_status_conservacao.includes("Ameaçado") || animal.f_status_conservacao.includes("Perigo") ? "destructive" : "secondary"}>Status:</Badge> {animal.f_status_conservacao}</div>}
+                {animal.f_status_conservacao && (
+                  <div>
+                    <Badge variant={animal.f_status_conservacao.includes("Ameaçado") || animal.f_status_conservacao.includes("Perigo") || animal.f_status_conservacao === "CR" || animal.f_status_conservacao === "EN" || animal.f_status_conservacao === "VU" ? "destructive" : "secondary"}>
+                      Status:
+                    </Badge> {animal.f_status_conservacao}
+                  </div>
+                )}
                 {animal.f_nomes_alternativos && (
                   <div className="text-xs text-muted-foreground pt-1">
                     Também conhecido como: {animal.f_nomes_alternativos}
@@ -49,20 +55,9 @@ export default async function HomePage() {
                 )}
               </CardContent>
               <CardFooter className="border-t pt-4 flex justify-end gap-2">
-                <Button variant="ghost" size="sm" asChild title="Visualizar">
-                  <Link href={`/animais/${animal.id}`}><Eye className="mr-1 h-4 w-4" /> Ver</Link>
+                <Button variant="outline" size="sm" asChild title="Ver Detalhes da Espécie">
+                  <Link href={`/animais/${animal.id}`}><Eye className="mr-1 h-4 w-4" /> Ver Detalhes da Espécie</Link>
                 </Button>
-                <Button variant="ghost" size="sm" asChild title="Editar">
-                  <Link href={`/animais/${animal.id}/editar`}><Edit className="mr-1 h-4 w-4" /> Editar</Link>
-                </Button>
-                 <DeleteConfirmationButton
-                    itemId={animal.id}
-                    itemName={animal.f_nome}
-                    itemType="Animal (Espécie)"
-                    deleteAction={deleteAnimal} 
-                    triggerButtonProps={{variant: "ghost", size: "sm", title: "Excluir"}}
-                    triggerIcon={<><Trash2 className="mr-1 h-4 w-4" /> Excluir</>}
-                  />
               </CardFooter>
             </Card>
           ))}
@@ -71,7 +66,7 @@ export default async function HomePage() {
         <Card className="shadow-lg">
           <CardContent className="text-center text-muted-foreground py-12">
             <Squirrel className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Nenhum animal registrado ainda.</h3>
+            <h3 className="text-xl font-semibold mb-2">Nenhuma espécie animal registrada ainda.</h3>
             <p>Utilize a seção "Animais" no menu lateral para adicionar uma nova espécie.</p>
           </CardContent>
         </Card>
