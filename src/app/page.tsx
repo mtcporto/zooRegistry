@@ -9,6 +9,8 @@ import Image from "next/image";
 import { Eye, Squirrel } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
+export const dynamic = 'force-dynamic'; // Força a renderização dinâmica
+
 export default async function HomePage() {
   const animais = await getAnimais();
 
@@ -21,21 +23,19 @@ export default async function HomePage() {
       {animais.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {animais.map((animal) => {
-            // Use animal.f_imagem if available, otherwise use a placeholder
             const imageUrl = animal.f_imagem || `https://placehold.co/400x300.png?text=${encodeURIComponent(animal.f_nome || 'Animal')}`;
-            // Construct data-ai-hint from f_nome, ensuring it's a string and taking first two words
             const nameParts = (animal.f_nome || 'animal').toLowerCase().split(" ");
             const imageHint = nameParts.slice(0, 2).join(" ");
 
             return (
               <Card key={animal.id} className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
-                <div className="relative w-full h-48 bg-muted"> {/* Ensure this parent has dimensions and relative positioning */}
+                <div className="relative w-full h-48 bg-muted">
                   <Image
                     src={imageUrl}
-                    alt={animal.f_nome}
+                    alt={animal.f_nome || 'Imagem do animal'}
                     fill
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    className="object-cover" // object-cover is usually better for cards
+                    className="object-cover"
                     data-ai-hint={imageHint}
                   />
                 </div>

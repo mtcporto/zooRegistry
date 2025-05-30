@@ -26,10 +26,8 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
     );
   }
 
-  // Use animal.f_imagem if available, otherwise use a placeholder
   const imageUrl = animal.f_imagem || `https://placehold.co/600x400.png?text=${encodeURIComponent(animal.f_nome || 'Animal')}`;
-  const imageAlt = `${animal.f_nome} - ${animal.f_nomecientifico}`;
-  // Construct data-ai-hint from f_nome, ensuring it's a string and taking first two words
+  const imageAlt = `${animal.f_nome || 'Animal'} - ${animal.f_nomecientifico || 'Científico'}`;
   const nameParts = (animal.f_nome || 'animal').toLowerCase().split(" ");
   const imageHint = nameParts.slice(0, 2).join(" ");
 
@@ -50,7 +48,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
             alt={imageAlt}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            className="object-contain" // Changed from object-cover to object-contain for better visibility
+            className="object-contain"
             data-ai-hint={imageHint}
           />
         </div>
