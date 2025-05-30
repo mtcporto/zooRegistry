@@ -2,11 +2,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { db } from "@/lib/firebase"; // Use Firestore db instance
+import { db } from "@/lib/firebase"; 
 import { collection, getDocs, getDoc, doc, addDoc, updateDoc, deleteDoc, Timestamp } from "firebase/firestore";
 import type { CadastroAnimal, SexoAnimal, MarcacaoTipoAnimal } from "@/types";
-import { getAnimalById } from "./animalActions"; // This will now use Firestore
-import { formatISO, parseISO } from "date-fns";
+import { getAnimalById } from "./animalActions"; 
+import { parseISO } from "date-fns";
 
 const CADASTROS_COLLECTION = "cadastros";
 
@@ -25,17 +25,24 @@ export async function getCadastros(): Promise<CadastroAnimal[]> {
         const animal = await getAnimalById(cadastroData.f_animalId as string);
         animalNome = animal?.f_nome || "Espécie não encontrada";
       }
+      // Convert Firestore Timestamps to ISO strings for client-side compatibility
+      const entradaISO = cadastroData.f_entrada instanceof Timestamp ? cadastroData.f_entrada.toDate().toISOString() : cadastroData.f_entrada;
+      const saidaISO = cadastroData.f_saida instanceof Timestamp ? cadastroData.f_saida.toDate().toISOString() : cadastroData.f_saida;
+
       return { 
         id: docSnap.id, 
         ...cadastroData,
         f_animalNome: animalNome,
-        f_entrada: cadastroData.f_entrada ? (cadastroData.f_entrada.toDate ? cadastroData.f_entrada.toDate().toISOString() : cadastroData.f_entrada) : undefined,
-        f_saida: cadastroData.f_saida ? (cadastroData.f_saida.toDate ? cadastroData.f_saida.toDate().toISOString() : cadastroData.f_saida) : undefined,
+        f_entrada: entradaISO,
+        f_saida: saidaISO,
       } as CadastroAnimal;
     });
     return Promise.all(cadastrosPromises);
-  } catch (error) {
-    console.error("Error fetching cadastros:", error);
+  } catch (error: any) {
+    console.error(`[FIRESTORE_ERROR:getCadastros] Failed to fetch from '${CADASTROS_COLLECTION}' collection:`, error.code, error.message);
+    if (error.code === 'permission-denied') {
+        console.error(`[FIRESTORE_ERROR:getCadastros] PERMISSION DENIED. Check Firestore security rules for read access.`);
+    }
     return [];
   }
 }
@@ -43,7 +50,7 @@ export async function getCadastros(): Promise<CadastroAnimal[]> {
 export async function getCadastroById(id: string): Promise<CadastroAnimal | undefined> {
   try {
     if (!id) {
-        console.warn("getCadastroById called with no id");
+        console.warn("[getCadastroById] Called with no id");
         return undefined;
     }
     const cadastroDocRef = doc(db, CADASTROS_COLLECTION, id);
@@ -56,29 +63,34 @@ export async function getCadastroById(id: string): Promise<CadastroAnimal | unde
         const animal = await getAnimalById(cadastroData.f_animalId as string);
         animalNome = animal?.f_nome || "Espécie não encontrada";
       }
+      const entradaISO = cadastroData.f_entrada instanceof Timestamp ? cadastroData.f_entrada.toDate().toISOString() : cadastroData.f_entrada;
+      const saidaISO = cadastroData.f_saida instanceof Timestamp ? cadastroData.f_saida.toDate().toISOString() : cadastroData.f_saida;
+      
       return { 
         id: docSnap.id, 
         ...cadastroData,
         f_animalNome: animalNome,
-        f_entrada: cadastroData.f_entrada ? (cadastroData.f_entrada.toDate ? cadastroData.f_entrada.toDate().toISOString() : cadastroData.f_entrada) : undefined,
-        f_saida: cadastroData.f_saida ? (cadastroData.f_saida.toDate ? cadastroData.f_saida.toDate().toISOString() : cadastroData.f_saida) : undefined,
+        f_entrada: entradaISO,
+        f_saida: saidaISO,
       } as CadastroAnimal;
     }
     return undefined;
-  } catch (error) {
-    console.error(`Error fetching cadastro by id ${id}:`, error);
+  } catch (error: any) {
+    console.error(`[FIRESTORE_ERROR:getCadastroById] Failed to fetch document '${id}' from '${CADASTROS_COLLECTION}':`, error.code, error.message);
+    if (error.code === 'permission-denied') {
+        console.error(`[FIRESTORE_ERROR:getCadastroById] PERMISSION DENIED for document '${id}'. Check Firestore security rules.`);
+    }
     return undefined;
   }
 }
 
-// Helper to prepare data for Firestore, converting dates to Timestamps
 const prepareCadastroDataForFirestore = (formData: FormData): Omit<CadastroAnimal, 'id' | 'f_animalNome'> => {
   const entradaStr = formData.get("f_entrada") as string | undefined;
   const saidaStr = formData.get("f_saida") as string | undefined;
 
-  const data: any = { // Use 'any' temporarily for easier construction
+  const data: any = { 
     f_animalId: formData.get("f_animalId") as string,
-    f_apelido: formData.get("f_apelido") as string || null, // Firestore prefers null for empty strings
+    f_apelido: formData.get("f_apelido") as string || null,
     f_registro: formData.get("f_registro") as string || null,
     f_procedencia: formData.get("f_procedencia") as string || null,
     f_sexo: formData.get("f_sexo") as SexoAnimal || null,
@@ -98,10 +110,9 @@ const prepareCadastroDataForFirestore = (formData: FormData): Omit<CadastroAnima
   if (saidaStr) data.f_saida = Timestamp.fromDate(parseISO(saidaStr));
   else data.f_saida = null;
   
-  // Remove undefined fields explicitly so Firestore doesn't store them
   Object.keys(data).forEach(key => {
     if (data[key] === undefined) {
-      data[key] = null; // Or delete data[key] if you prefer not to store nulls
+      data[key] = null; 
     }
   });
   
@@ -124,8 +135,11 @@ export async function addCadastro(formData: FormData): Promise<{ success: boolea
     revalidatePath(`/animais/${animalId}`, "layout"); 
 
     return { success: true, message: "Cadastro de animal individual adicionado com sucesso ao Firestore!", data: { id: docRef.id, ...newCadastroData, f_animalNome: animalExists.f_nome } as CadastroAnimal };
-  } catch (error) {
-    console.error("Error adding cadastro to Firestore:", error);
+  } catch (error: any) {
+    console.error(`[FIRESTORE_ERROR:addCadastro] Failed to add document to '${CADASTROS_COLLECTION}':`, error.code, error.message);
+    if (error.code === 'permission-denied') {
+        console.error(`[FIRESTORE_ERROR:addCadastro] PERMISSION DENIED. Check Firestore security rules for write access.`);
+    }
     return { success: false, message: "Erro ao adicionar cadastro ao Firestore." };
   }
 }
@@ -143,7 +157,6 @@ export async function updateCadastro(id: string, formData: FormData): Promise<{ 
   const updatedCadastroData = prepareCadastroDataForFirestore(formData);
 
   try {
-    // Fetch original animalId to revalidate its path if changed
     const originalCadastroSnap = await getDoc(cadastroDocRef);
     const originalAnimalId = originalCadastroSnap.exists() ? (originalCadastroSnap.data().f_animalId as string) : null;
 
@@ -158,8 +171,11 @@ export async function updateCadastro(id: string, formData: FormData): Promise<{ 
     }
 
     return { success: true, message: "Cadastro individual atualizado com sucesso no Firestore!", data: { id, ...updatedCadastroData, f_animalNome: animalExists.f_nome } as CadastroAnimal };
-  } catch (error) {
-    console.error("Error updating cadastro in Firestore:", error);
+  } catch (error: any) {
+    console.error(`[FIRESTORE_ERROR:updateCadastro] Failed to update document '${id}' in '${CADASTROS_COLLECTION}':`, error.code, error.message);
+    if (error.code === 'permission-denied') {
+        console.error(`[FIRESTORE_ERROR:updateCadastro] PERMISSION DENIED for document '${id}'. Check Firestore security rules.`);
+    }
     return { success: false, message: "Erro ao atualizar cadastro no Firestore." };
   }
 }
@@ -168,7 +184,6 @@ export async function deleteCadastro(id: string): Promise<{ success: boolean; me
   if (!id) return { success: false, message: "ID do cadastro é obrigatório para exclusão."};
   try {
     const cadastroDocRef = doc(db, CADASTROS_COLLECTION, id);
-    // Fetch original animalId to revalidate its path
     const originalCadastroSnap = await getDoc(cadastroDocRef);
     const originalAnimalId = originalCadastroSnap.exists() ? (originalCadastroSnap.data().f_animalId as string) : null;
 
@@ -181,8 +196,12 @@ export async function deleteCadastro(id: string): Promise<{ success: boolean; me
     }
     
     return { success: true, message: "Cadastro individual excluído com sucesso do Firestore!" };
-  } catch (error) {
-    console.error("Error deleting cadastro from Firestore:", error);
+  } catch (error: any) {
+    console.error(`[FIRESTORE_ERROR:deleteCadastro] Failed to delete document '${id}' from '${CADASTROS_COLLECTION}':`, error.code, error.message);
+     if (error.code === 'permission-denied') {
+        console.error(`[FIRESTORE_ERROR:deleteCadastro] PERMISSION DENIED for document '${id}'. Check Firestore security rules.`);
+    }
     return { success: false, message: "Erro ao excluir cadastro do Firestore." };
   }
 }
+

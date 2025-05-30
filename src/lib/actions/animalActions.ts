@@ -19,8 +19,14 @@ export async function getAnimais(): Promise<Animal[]> {
       return [];
     }
     return snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Animal));
-  } catch (error) {
-    console.error("Error fetching animais:", error);
+  } catch (error: any) {
+    console.error(`[FIRESTORE_ERROR:getAnimais] Failed to fetch from '${ANIMAIS_COLLECTION}' collection:`, error.code, error.message);
+    if (error.code === 'permission-denied') {
+        console.error("[FIRESTORE_ERROR:getAnimais] PERMISSION DENIED. Please check your Firestore security rules in the Firebase console. Public read access might be required for this collection.");
+    }
+    // Depending on app requirements, you might want to throw the error
+    // or return an empty array to prevent the page from crashing.
+    // For now, returning empty to match previous behavior.
     return [];
   }
 }
@@ -28,7 +34,7 @@ export async function getAnimais(): Promise<Animal[]> {
 export async function getAnimalById(id: string): Promise<Animal | undefined> {
   try {
     if (!id) {
-        console.warn("getAnimalById called with no id");
+        console.warn("[getAnimalById] Called with no id");
         return undefined;
     }
     const animalDocRef = doc(db, ANIMAIS_COLLECTION, id);
@@ -37,8 +43,11 @@ export async function getAnimalById(id: string): Promise<Animal | undefined> {
       return { id: docSnap.id, ...docSnap.data() } as Animal;
     }
     return undefined;
-  } catch (error) {
-    console.error(`Error fetching animal by id ${id}:`, error);
+  } catch (error: any) {
+    console.error(`[FIRESTORE_ERROR:getAnimalById] Failed to fetch document '${id}' from '${ANIMAIS_COLLECTION}':`, error.code, error.message);
+    if (error.code === 'permission-denied') {
+        console.error(`[FIRESTORE_ERROR:getAnimalById] PERMISSION DENIED for document '${id}'. Check Firestore security rules.`);
+    }
     return undefined;
   }
 }
@@ -120,8 +129,11 @@ export async function addAnimal(formData: FormData): Promise<{ success: boolean;
     revalidatePath("/animais", "layout");
     revalidatePath("/", "layout");
     return { success: true, message: "Animal (espécie) adicionado com sucesso ao Firestore!", data: { id: docRef.id, ...newAnimalData } };
-  } catch (error) {
-    console.error("Error adding animal to Firestore:", error);
+  } catch (error: any) {
+    console.error(`[FIRESTORE_ERROR:addAnimal] Failed to add document to '${ANIMAIS_COLLECTION}':`, error.code, error.message);
+     if (error.code === 'permission-denied') {
+        console.error(`[FIRESTORE_ERROR:addAnimal] PERMISSION DENIED. Check Firestore security rules for write access.`);
+    }
     return { success: false, message: "Erro ao adicionar animal (espécie) ao Firestore." };
   }
 }
@@ -165,7 +177,7 @@ export async function updateAnimal(id: string, formData: FormData): Promise<{ su
       try {
         const fetchedIUCN = await getConservationStatusAndTaxonomy({ scientificName: nomeCientifico });
         iucnDataResult = {
-            status: fetchedIUCN.status, // This is IUCN code
+            status: fetchedIUCN.status, 
             kingdomName: fetchedIUCN.kingdomName,
             phylumName: fetchedIUCN.phylumName,
             className: fetchedIUCN.className,
@@ -234,8 +246,11 @@ export async function updateAnimal(id: string, formData: FormData): Promise<{ su
     revalidatePath("/", "layout");
 
     return { success: true, message: "Animal (espécie) atualizado com sucesso no Firestore!", data: { id, ...updatedAnimalData } };
-  } catch (error) {
-    console.error("Error updating animal in Firestore:", error);
+  } catch (error: any) {
+    console.error(`[FIRESTORE_ERROR:updateAnimal] Failed to update document '${id}' in '${ANIMAIS_COLLECTION}':`, error.code, error.message);
+     if (error.code === 'permission-denied') {
+        console.error(`[FIRESTORE_ERROR:updateAnimal] PERMISSION DENIED for document '${id}'. Check Firestore security rules.`);
+    }
     return { success: false, message: "Erro ao atualizar animal (espécie) no Firestore." };
   }
 }
@@ -243,7 +258,6 @@ export async function updateAnimal(id: string, formData: FormData): Promise<{ su
 export async function deleteAnimal(id: string): Promise<{ success: boolean; message: string }> {
   if (!id) return { success: false, message: "ID do animal é obrigatório para exclusão."};
   try {
-    // Check if there are associated cadastros
     const q = query(collection(db, CADASTROS_COLLECTION), where("f_animalId", "==", id));
     const cadastrosSnapshot = await getDocs(q);
     if (!cadastrosSnapshot.empty) {
@@ -255,12 +269,16 @@ export async function deleteAnimal(id: string): Promise<{ success: boolean; mess
     
     console.log(`[AnimalAction_Delete_Firestore] Animal with id ${id} deleted.`);
     revalidatePath("/animais", "layout");
-    revalidatePath(`/animais/${id}`, "layout"); // Invalidate specific animal page if it was visited
+    revalidatePath(`/animais/${id}`, "layout");
     revalidatePath("/", "layout");
     
     return { success: true, message: "Animal (espécie) excluído com sucesso do Firestore!" };
-  } catch (error) {
-    console.error("Error deleting animal from Firestore:", error);
+  } catch (error: any) {
+    console.error(`[FIRESTORE_ERROR:deleteAnimal] Failed to delete document '${id}' from '${ANIMAIS_COLLECTION}':`, error.code, error.message);
+    if (error.code === 'permission-denied') {
+        console.error(`[FIRESTORE_ERROR:deleteAnimal] PERMISSION DENIED for document '${id}'. Check Firestore security rules.`);
+    }
     return { success: false, message: "Erro ao excluir animal (espécie) do Firestore." };
   }
 }
+
