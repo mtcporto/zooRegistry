@@ -33,15 +33,19 @@ const getAnimalImageFlow = ai.defineFlow(
     outputSchema: GetAnimalImageOutputSchema,
   },
   async (input) => {
+    console.log(`[PEXELS_FLOW] Attempting to fetch image for: "${input.animalName}"`);
     const apiKey = process.env.PEXELS_API_KEY;
 
     if (!apiKey) {
-      console.warn("PEXELS_API_KEY not set in environment variables. Skipping Pexels API call.");
+      const errorMsg = "PEXELS_API_KEY not set in environment variables. Skipping Pexels API call.";
+      console.warn(`[PEXELS_FLOW] ${errorMsg}`);
       return { imageUrl: null, errorMessage: "Pexels API key not configured. Please set PEXELS_API_KEY in your .env or .env.local file." };
     }
 
     if (!input.animalName || input.animalName.trim() === "") {
-      return { imageUrl: null, errorMessage: "Animal name is required for Pexels search." };
+      const errorMsg = "Animal name is required for Pexels search.";
+      console.log(`[PEXELS_FLOW] ${errorMsg}`);
+      return { imageUrl: null, errorMessage: errorMsg };
     }
 
     const PEXELS_API_BASE_URL = "https://api.pexels.com/v1/search";
@@ -49,10 +53,7 @@ const getAnimalImageFlow = ai.defineFlow(
     // We'll fetch only 1 image, and try to get a landscape one if possible for consistency.
     const url = `${PEXELS_API_BASE_URL}?query=${query}&per_page=1&orientation=landscape`;
 
-    // Log URL without sensitive key for debugging, only if not in production
-    if (process.env.NODE_ENV !== 'production') {
-        console.log(`Fetching image from Pexels: ${PEXELS_API_BASE_URL}?query=${query}&per_page=1&orientation=landscape`);
-    }
+    console.log(`[PEXELS_FLOW] Fetching from URL: ${PEXELS_API_BASE_URL}?query=${query}&per_page=1&orientation=landscape (API key omitted from log)`);
 
     try {
       const response = await fetch(url, {
@@ -63,7 +64,8 @@ const getAnimalImageFlow = ai.defineFlow(
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`Pexels API request failed with status ${response.status}: ${errorText}`);
+        const errorMsg = `Pexels API request failed with status ${response.status}: ${errorText}`;
+        console.error(`[PEXELS_FLOW] ${errorMsg}`);
         return { imageUrl: null, errorMessage: `Pexels API request failed: ${response.statusText}` };
       }
 
@@ -73,20 +75,22 @@ const getAnimalImageFlow = ai.defineFlow(
         // Pexels typically provides multiple sizes. 'src.large' or 'src.original' are good choices.
         // 'src.medium' or 'src.landscape' might also be suitable depending on display needs.
         const imageUrl = data.photos[0].src.large; 
-        console.log(`Successfully fetched image for ${input.animalName} from Pexels: ${imageUrl}`);
+        console.log(`[PEXELS_FLOW] Successfully fetched image for ${input.animalName}: ${imageUrl}`);
         return { imageUrl, errorMessage: undefined };
       } else {
-        console.log(`No photos found on Pexels for query: ${input.animalName}`);
+        const infoMsg = `No photos found on Pexels for query: ${input.animalName}`;
+        console.log(`[PEXELS_FLOW] ${infoMsg}`);
         return { imageUrl: null, errorMessage: `No photos found on Pexels for "${input.animalName}".` };
       }
 
     } catch (error) {
-      console.error(`Error fetching image from Pexels for ${input.animalName}:`, error);
       let message = 'An unexpected error occurred while fetching image from Pexels.';
       if (error instanceof Error) {
         message = error.message;
       }
+      console.error(`[PEXELS_FLOW] Error fetching image from Pexels for ${input.animalName}:`, error);
       return { imageUrl: null, errorMessage: message };
     }
   }
 );
+
