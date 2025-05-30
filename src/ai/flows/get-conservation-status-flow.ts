@@ -52,10 +52,6 @@ const getConservationStatusFlow = ai.defineFlow(
     const API_BASE_URL = "http://apiv3.iucnredlist.org/api/v4"; // Base URL for IUCN API v4
 
     try {
-      /*
-      // --- UNCOMMENT THIS SECTION TO MAKE ACTUAL API CALLS FOR IUCN V4 ---
-      // --- AND ENSURE YOU HAVE SET IUCN_REDLIST_API_TOKEN in .env.local ---
-
       // 1. Get assessment IDs for the species
       const taxaUrl = `${API_BASE_URL}/taxa/scientific_name/${encodeURIComponent(input.scientificName)}?token=${apiKey}`;
       console.log(`Fetching taxa info from: ${taxaUrl}`);
@@ -85,7 +81,6 @@ const getConservationStatusFlow = ai.defineFlow(
       }
       
       // Sort by year_published, descending, to get the latest.
-      // The API might already return them in a useful order, but explicit sort is safer.
       globalAssessments.sort((a: any, b: any) => {
         const yearA = parseInt(a.year_published, 10);
         const yearB = parseInt(b.year_published, 10);
@@ -125,12 +120,6 @@ const getConservationStatusFlow = ai.defineFlow(
         console.warn(`Received unknown or missing category from IUCN v4: '${category}' for ${input.scientificName}, assessment ID ${latestAssessmentId}. Full assessment data:`, assessmentData);
         return { status: null, errorMessage: `Unknown or missing category from IUCN v4: '${category || 'Not provided'}'` };
       }
-      // --- END OF IUCN V4 API CALL SECTION ---
-      */
-
-      // Placeholder until API call is uncommented
-      console.log(`Simulating IUCN API v4 call for: ${input.scientificName}. Uncomment code in get-conservation-status-flow.ts to use actual API.`);
-      return { status: null, errorMessage: "IUCN API v4 call is currently disabled in the flow." };
 
     } catch (error) {
       console.error(`Error fetching conservation status from IUCN v4 for ${input.scientificName}:`, error);
