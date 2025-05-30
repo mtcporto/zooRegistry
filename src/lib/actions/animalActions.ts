@@ -1,3 +1,4 @@
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -7,7 +8,7 @@ import { getClassById } from "./classeActions";
 import { getOrdemById } from "./ordemActions";
 import { getFamiliaById } from "./familiaActions";
 import { getConservationStatus } from "@/ai/flows/get-conservation-status-flow";
-import { getAnimalImage } from "@/ai/flows/get-animal-image-flow"; // Import the new flow
+import { getAnimalImage } from "@/ai/flows/get-animal-image-flow";
 
 export async function getAnimais(): Promise<Animal[]> {
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -61,7 +62,7 @@ export async function addAnimal(formData: FormData): Promise<{ success: boolean;
   if (!await getOrdemById(ordemId)) return { success: false, message: "Ordem selecionada inválida." };
   if (!await getFamiliaById(familiaId)) return { success: false, message: "Família selecionada inválida." };
 
-  if (!statusConservacao && nomeCientifico && process.env.IUCN_REDLIST_API_TOKEN) {
+  if ((!statusConservacao || statusConservacao.trim() === "") && nomeCientifico && process.env.IUCN_REDLIST_API_TOKEN) {
     try {
       console.log(`Attempting to fetch IUCN status for ${nomeCientifico}...`);
       const iucnResult = await getConservationStatus({ scientificName: nomeCientifico });
@@ -69,25 +70,26 @@ export async function addAnimal(formData: FormData): Promise<{ success: boolean;
         statusConservacao = iucnResult.status;
         console.log(`IUCN status for ${nomeCientifico} successfully fetched: ${statusConservacao}`);
       } else if (iucnResult.errorMessage) {
-        console.log(`IUCN status for ${nomeCientifico} (API V4): ${iucnResult.errorMessage}`);
+        console.log(`IUCN status fetch for ${nomeCientifico} (API V4): ${iucnResult.errorMessage}`);
       }
     } catch (e) {
         console.error(`Error fetching IUCN status for ${nomeCientifico}:`, e);
     }
   }
 
-  if ((!imagem || imagem.trim() === "") && nomeVulgar && process.env.PEXELS_API_KEY) {
+  const searchTermForImage = nomeCientifico || nomeVulgar; // Prioritize scientific name
+  if ((!imagem || imagem.trim() === "") && searchTermForImage && process.env.PEXELS_API_KEY) {
     try {
-      console.log(`Attempting to fetch image for ${nomeVulgar} from Pexels...`);
-      const imageResult = await getAnimalImage({ animalName: nomeVulgar });
+      console.log(`Attempting to fetch image for "${searchTermForImage}" from Pexels...`);
+      const imageResult = await getAnimalImage({ animalName: searchTermForImage });
       if (imageResult.imageUrl) {
         imagem = imageResult.imageUrl;
-        console.log(`Image for ${nomeVulgar} successfully fetched from Pexels: ${imagem}`);
+        console.log(`Image for "${searchTermForImage}" successfully fetched from Pexels: ${imagem}`);
       } else if (imageResult.errorMessage) {
-        console.log(`Pexels image fetch for ${nomeVulgar}: ${imageResult.errorMessage}`);
+        console.log(`Pexels image fetch for "${searchTermForImage}": ${imageResult.errorMessage}`);
       }
     } catch (e) {
-      console.error(`Error fetching image from Pexels for ${nomeVulgar}:`, e);
+      console.error(`Error fetching image from Pexels for "${searchTermForImage}":`, e);
     }
   }
 
@@ -143,7 +145,6 @@ export async function updateAnimal(id: string, formData: FormData): Promise<{ su
   
   const animalOriginal = db.animais[animalIndex];
 
-  // Fetch from IUCN only if status is not provided (or explicitly cleared) and scientific name is present
   const userProvidedStatus = formData.has("f_status_conservacao");
   const currentStatusOnForm = formData.get("f_status_conservacao") as string | undefined;
 
@@ -155,43 +156,42 @@ export async function updateAnimal(id: string, formData: FormData): Promise<{ su
         statusConservacao = iucnResult.status;
         console.log(`IUCN status for ${nomeCientifico} successfully fetched: ${statusConservacao}`);
       } else if (iucnResult.errorMessage) {
-         console.log(`IUCN status for ${nomeCientifico} (API V4): ${iucnResult.errorMessage}`);
-         statusConservacao = userProvidedStatus ? currentStatusOnForm : animalOriginal.f_status_conservacao; // keep form value if explicitly set, else original
+         console.log(`IUCN status fetch for ${nomeCientifico} (API V4): ${iucnResult.errorMessage}`);
+         statusConservacao = userProvidedStatus ? currentStatusOnForm : animalOriginal.f_status_conservacao;
       }
     } catch (e) {
         console.error(`Error fetching IUCN status for ${nomeCientifico}:`, e);
-        statusConservacao = userProvidedStatus ? currentStatusOnForm : animalOriginal.f_status_conservacao; // keep form value if explicitly set, else original
+        statusConservacao = userProvidedStatus ? currentStatusOnForm : animalOriginal.f_status_conservacao;
     }
   } else if (userProvidedStatus) {
-    statusConservacao = currentStatusOnForm; // User explicitly provided a status (even if empty)
+    statusConservacao = currentStatusOnForm;
   } else {
-    statusConservacao = animalOriginal.f_status_conservacao; // No change requested by user, keep original
+    statusConservacao = animalOriginal.f_status_conservacao;
   }
 
-
-  // Fetch image from Pexels only if image is not provided (or explicitly cleared) and animal name is present
   const userProvidedImage = formData.has("f_imagem");
   const currentImageOnForm = formData.get("f_imagem") as string | undefined;
+  const searchTermForImage = nomeCientifico || nomeVulgar; // Prioritize scientific name
 
-  if ((!userProvidedImage || (userProvidedImage && (!currentImageOnForm || currentImageOnForm.trim() === ""))) && nomeVulgar && process.env.PEXELS_API_KEY) {
+  if ((!userProvidedImage || (userProvidedImage && (!currentImageOnForm || currentImageOnForm.trim() === ""))) && searchTermForImage && process.env.PEXELS_API_KEY) {
     try {
-      console.log(`Attempting to fetch image for ${nomeVulgar} from Pexels (update)...`);
-      const imageResult = await getAnimalImage({ animalName: nomeVulgar });
+      console.log(`Attempting to fetch image for "${searchTermForImage}" from Pexels (update)...`);
+      const imageResult = await getAnimalImage({ animalName: searchTermForImage });
       if (imageResult.imageUrl) {
         imagem = imageResult.imageUrl;
-         console.log(`Image for ${nomeVulgar} successfully fetched from Pexels: ${imagem}`);
+         console.log(`Image for "${searchTermForImage}" successfully fetched from Pexels: ${imagem}`);
       } else if (imageResult.errorMessage) {
-        console.log(`Pexels image fetch for ${nomeVulgar}: ${imageResult.errorMessage}`);
-        imagem = userProvidedImage ? currentImageOnForm : animalOriginal.f_imagem; // Keep form value or original if fetch fails
+        console.log(`Pexels image fetch for "${searchTermForImage}": ${imageResult.errorMessage}`);
+        imagem = userProvidedImage ? currentImageOnForm : animalOriginal.f_imagem;
       }
     } catch (e) {
-      console.error(`Error fetching image from Pexels for ${nomeVulgar}:`, e);
-      imagem = userProvidedImage ? currentImageOnForm : animalOriginal.f_imagem; // Keep form value or original on error
+      console.error(`Error fetching image from Pexels for "${searchTermForImage}":`, e);
+      imagem = userProvidedImage ? currentImageOnForm : animalOriginal.f_imagem;
     }
   } else if (userProvidedImage) {
-    imagem = currentImageOnForm; // User explicitly provided an image URL (even if empty)
+    imagem = currentImageOnForm;
   } else {
-    imagem = animalOriginal.f_imagem; // No change requested by user, keep original
+    imagem = animalOriginal.f_imagem;
   }
 
 
