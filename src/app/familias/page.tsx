@@ -64,7 +64,7 @@ export default async function FamiliasPage() {
                       <Button variant="ghost" size="icon" asChild title="Visualizar">
                         <Link href={`/familias/${familia.id}`}><Eye className="h-4 w-4" /></Link>
                       </Button>
-                      <Button variant="ghost" size="icon" asChild title="Editar (Em breve)">
+                      <Button variant="ghost" size="icon" asChild title="Editar">
                         <Link href={`/familias/${familia.id}/editar`}><Edit className="h-4 w-4" /></Link>
                       </Button>
                       <DeleteConfirmationButton

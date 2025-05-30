@@ -23,7 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Animal, Classe, Ordem, Familia } from "@/types";
-import { addAnimal } from "@/lib/actions/animalActions";
+import { addAnimal, updateAnimal } from "@/lib/actions/animalActions";
 import { SubmitButton } from "./SubmitButton";
 
 const formSchema = z.object({
@@ -32,8 +32,9 @@ const formSchema = z.object({
   f_classeId: z.string({ required_error: "Selecione uma classe." }),
   f_ordemId: z.string({ required_error: "Selecione uma ordem." }),
   f_familiaId: z.string({ required_error: "Selecione uma família." }),
-  f_nomes_alternativos: z.string().max(200).optional(),
-  f_imagem: z.string().url({ message: "Por favor, insira uma URL válida para a imagem." }).optional().or(z.literal('')),
+  f_nomes_alternativos: z.string().max(200).optional().nullable(),
+  f_imagem: z.string().url({ message: "Por favor, insira uma URL válida para a imagem." }).optional().or(z.literal('')).nullable(),
+  f_status_conservacao: z.string().max(100).optional().nullable(),
 });
 
 type AnimalFormValues = z.infer<typeof formSchema>;
@@ -51,7 +52,16 @@ export function AnimalForm({ initialData, classes, ordens: allOrdens, familias: 
 
   const form = useForm<AnimalFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: initialData || {
+    defaultValues: initialData ? {
+        f_nomecientifico: initialData.f_nomecientifico || "",
+        f_nome: initialData.f_nome || "",
+        f_classeId: initialData.f_classeId || "",
+        f_ordemId: initialData.f_ordemId || "",
+        f_familiaId: initialData.f_familiaId || "",
+        f_nomes_alternativos: initialData.f_nomes_alternativos || "",
+        f_imagem: initialData.f_imagem || "",
+        f_status_conservacao: initialData.f_status_conservacao || "",
+    } : {
       f_nomecientifico: "",
       f_nome: "",
       f_classeId: "",
@@ -59,6 +69,7 @@ export function AnimalForm({ initialData, classes, ordens: allOrdens, familias: 
       f_familiaId: "",
       f_nomes_alternativos: "",
       f_imagem: "",
+      f_status_conservacao: "",
     },
   });
 
@@ -76,18 +87,16 @@ export function AnimalForm({ initialData, classes, ordens: allOrdens, familias: 
   }, [selectedOrdemId, allFamilias]);
   
   React.useEffect(() => {
-    // Reset ordem if classe changes and selected ordem is no longer valid
     if (selectedClasseId && form.getValues("f_ordemId")) {
         const currentOrdem = allOrdens.find(o => o.id === form.getValues("f_ordemId"));
         if (currentOrdem && currentOrdem.f_classeId !== selectedClasseId) {
             form.setValue("f_ordemId", "");
-            form.setValue("f_familiaId", ""); // Also reset familia
+            form.setValue("f_familiaId", ""); 
         }
     }
   }, [selectedClasseId, form, allOrdens]);
 
   React.useEffect(() => {
-    // Reset familia if ordem changes and selected familia is no longer valid
     if (selectedOrdemId && form.getValues("f_familiaId")) {
         const currentFamilia = allFamilias.find(f => f.id === form.getValues("f_familiaId"));
         if (currentFamilia && currentFamilia.f_ordemId !== selectedOrdemId) {
@@ -105,7 +114,12 @@ export function AnimalForm({ initialData, classes, ordens: allOrdens, familias: 
       }
     });
 
-    const result = await addAnimal(formData);
+    let result;
+    if (initialData?.id) {
+      result = await updateAnimal(initialData.id, formData);
+    } else {
+      result = await addAnimal(formData);
+    }
 
     if (result.success) {
       toast({
@@ -126,7 +140,7 @@ export function AnimalForm({ initialData, classes, ordens: allOrdens, familias: 
   return (
     <Card className="max-w-2xl mx-auto shadow-lg">
       <CardHeader>
-        <CardTitle>{initialData ? "Editar Animal" : "Novo Animal (Espécie)"}</CardTitle>
+        <CardTitle>{initialData ? "Editar Animal (Espécie)" : "Novo Animal (Espécie)"}</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -166,7 +180,7 @@ export function AnimalForm({ initialData, classes, ordens: allOrdens, familias: 
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Classe</FormLabel>
-                  <Select onValueChange={(value) => { field.onChange(value); form.setValue("f_ordemId", ""); form.setValue("f_familiaId", ""); }} defaultValue={field.value}>
+                  <Select onValueChange={(value) => { field.onChange(value); form.setValue("f_ordemId", "", { shouldValidate: true }); form.setValue("f_familiaId", "", { shouldValidate: true }); }} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione a classe" />
@@ -191,7 +205,7 @@ export function AnimalForm({ initialData, classes, ordens: allOrdens, familias: 
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Ordem</FormLabel>
-                  <Select onValueChange={(value) => { field.onChange(value); form.setValue("f_familiaId", ""); }} value={field.value} disabled={!selectedClasseId || filteredOrdens.length === 0}>
+                  <Select onValueChange={(value) => { field.onChange(value); form.setValue("f_familiaId", "", { shouldValidate: true }); }} value={field.value} disabled={!selectedClasseId || filteredOrdens.length === 0}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder={!selectedClasseId ? "Selecione uma classe primeiro" : (filteredOrdens.length === 0 ? "Nenhuma ordem para esta classe" : "Selecione a ordem")} />
@@ -242,7 +256,7 @@ export function AnimalForm({ initialData, classes, ordens: allOrdens, familias: 
                 <FormItem>
                   <FormLabel>Outros Nomes (Opcional)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Nomes populares, regionais, etc." {...field} />
+                    <Textarea placeholder="Nomes populares, regionais, etc." {...field} value={field.value ?? ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -255,9 +269,23 @@ export function AnimalForm({ initialData, classes, ordens: allOrdens, familias: 
                 <FormItem>
                   <FormLabel>URL da Imagem (Opcional)</FormLabel>
                   <FormControl>
-                    <Input type="url" placeholder="https://exemplo.com/imagem.png" {...field} />
+                    <Input type="url" placeholder="https://exemplo.com/imagem.png" {...field} value={field.value ?? ""} />
                   </FormControl>
                   <FormDescription>Link para uma foto ou ilustração do animal.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="f_status_conservacao"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status de Conservação (Opcional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Ex: Em Perigo (EN)" {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <FormDescription>Ex: Pouco Preocupante (LC), Ameaçado (EN), etc.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

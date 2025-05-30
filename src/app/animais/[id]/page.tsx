@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default async function AnimalDetailPage({ params }: { params: { id: string } }) {
@@ -41,7 +41,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
               src={animal.f_imagem}
               alt={`${animal.f_nome} - ${animal.f_nomecientifico}`}
               layout="fill"
-              objectFit="contain" // Use contain to see the whole animal
+              objectFit="contain" 
               data-ai-hint={ (animal as any)['data-ai-hint'] || animal.f_nome.toLowerCase().split(" ").slice(0,2).join(" ") }
             />
           </div>
@@ -66,6 +66,15 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
             </div>
           </div>
 
+          {animal.f_status_conservacao && (
+            <div>
+              <h3 className="text-xl font-semibold">Status de Conservação</h3>
+              <Badge variant={animal.f_status_conservacao.includes("Ameaçado") || animal.f_status_conservacao.includes("Perigo") ? "destructive" : "secondary"}>
+                {animal.f_status_conservacao}
+              </Badge>
+            </div>
+          )}
+
           {animal.f_nomes_alternativos && (
             <div>
               <h3 className="text-xl font-semibold">Outros Nomes</h3>
@@ -77,7 +86,11 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
            </div>
         </CardContent>
         <CardFooter className="flex justify-between items-center">
-          <Button variant="outline" disabled>Editar Animal (Em breve)</Button>
+          <Button variant="outline" asChild>
+            <Link href={`/animais/${animal.id}/editar`}>
+              <Edit className="mr-2 h-4 w-4" /> Editar Animal (Espécie)
+            </Link>
+          </Button>
           <Button asChild>
             <Link href={`/cadastros/novo?animalId=${animal.id}&animalNome=${encodeURIComponent(animal.f_nome)}`}>
               Registrar Indivíduo desta Espécie
@@ -88,4 +101,3 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
     </div>
   );
 }
-

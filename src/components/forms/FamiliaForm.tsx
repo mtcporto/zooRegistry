@@ -22,15 +22,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Familia, Ordem } from "@/types";
-import { addFamilia } from "@/lib/actions/familiaActions";
+import { addFamilia, updateFamilia } from "@/lib/actions/familiaActions";
 import { SubmitButton } from "./SubmitButton";
 
 const formSchema = z.object({
   f_nome: z.string().min(2, { message: "Nome deve ter pelo menos 2 caracteres." }).max(100),
   f_ordemId: z.string({ required_error: "Selecione uma ordem." }),
-  f_descricao: z.string().max(500).optional(),
-  f_imagem: z.string().url({ message: "Por favor, insira uma URL válida para a imagem." }).optional().or(z.literal('')),
-  f_hero: z.string().url({ message: "Por favor, insira uma URL válida para a imagem hero." }).optional().or(z.literal('')),
+  f_descricao: z.string().max(500).optional().nullable(),
+  f_imagem: z.string().url({ message: "Por favor, insira uma URL válida para a imagem." }).optional().or(z.literal('')).nullable(),
+  f_hero: z.string().url({ message: "Por favor, insira uma URL válida para a imagem hero." }).optional().or(z.literal('')).nullable(),
 });
 
 type FamiliaFormValues = z.infer<typeof formSchema>;
@@ -47,10 +47,11 @@ export function FamiliaForm({ initialData, ordens }: FamiliaFormProps) {
   const form = useForm<FamiliaFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData ? {
-      ...initialData,
-      f_descricao: initialData.f_descricao || "",
-      f_imagem: initialData.f_imagem || "",
-      f_hero: initialData.f_hero || "",
+        f_nome: initialData.f_nome || "",
+        f_ordemId: initialData.f_ordemId || "",
+        f_descricao: initialData.f_descricao || "",
+        f_imagem: initialData.f_imagem || "",
+        f_hero: initialData.f_hero || "",
     } : {
       f_nome: "",
       f_ordemId: "",
@@ -68,7 +69,12 @@ export function FamiliaForm({ initialData, ordens }: FamiliaFormProps) {
     if (values.f_imagem) formData.append("f_imagem", values.f_imagem);
     if (values.f_hero) formData.append("f_hero", values.f_hero);
 
-    const result = await addFamilia(formData);
+    let result;
+    if (initialData?.id) {
+      result = await updateFamilia(initialData.id, formData);
+    } else {
+      result = await addFamilia(formData);
+    }
 
     if (result.success) {
       toast({
@@ -138,9 +144,9 @@ export function FamiliaForm({ initialData, ordens }: FamiliaFormProps) {
               name="f_descricao"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Descrição</FormLabel>
+                  <FormLabel>Descrição (Opcional)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Descreva brevemente a família..." {...field} />
+                    <Textarea placeholder="Descreva brevemente a família..." {...field} value={field.value ?? ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -153,7 +159,7 @@ export function FamiliaForm({ initialData, ordens }: FamiliaFormProps) {
                 <FormItem>
                   <FormLabel>URL da Imagem (Opcional)</FormLabel>
                   <FormControl>
-                    <Input type="url" placeholder="https://exemplo.com/imagem.png" {...field} />
+                    <Input type="url" placeholder="https://exemplo.com/imagem.png" {...field} value={field.value ?? ""} />
                   </FormControl>
                   <FormDescription>Link para uma imagem representativa da família.</FormDescription>
                   <FormMessage />
@@ -167,7 +173,7 @@ export function FamiliaForm({ initialData, ordens }: FamiliaFormProps) {
                 <FormItem>
                   <FormLabel>URL da Imagem Hero (Opcional)</FormLabel>
                   <FormControl>
-                    <Input type="url" placeholder="https://exemplo.com/hero.png" {...field} />
+                    <Input type="url" placeholder="https://exemplo.com/hero.png" {...field} value={field.value ?? ""} />
                   </FormControl>
                   <FormDescription>Link para uma imagem de destaque (banner) para a família.</FormDescription>
                   <FormMessage />

@@ -50,7 +50,7 @@ export default async function CadastrosPage() {
                   <Link href={`/cadastros/${cadastro.id}`}><Eye className="mr-1 h-4 w-4" /> Detalhes</Link>
                 </Button>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" asChild title="Editar (Em breve)">
+                  <Button variant="ghost" size="icon" asChild title="Editar">
                     <Link href={`/cadastros/${cadastro.id}/editar`}><Edit className="h-4 w-4" /></Link>
                   </Button>
                   <DeleteConfirmationButton

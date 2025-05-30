@@ -1,12 +1,14 @@
 
-import { getFamiliaById } from "@/lib/actions/familiaActions";
+import { getFamiliaById, deleteFamilia } from "@/lib/actions/familiaActions";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Edit, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { DeleteConfirmationButton } from "@/components/DeleteConfirmationButton";
+import { redirect } from 'next/navigation';
 
 export default async function FamiliaDetailPage({ params }: { params: { id: string } }) {
   const familia = await getFamiliaById(params.id);
@@ -26,17 +28,33 @@ export default async function FamiliaDetailPage({ params }: { params: { id: stri
 
   return (
     <div className="container mx-auto p-4 md:p-8">
-      <div className="mb-6">
+      <div className="mb-6 flex justify-between items-center">
         <Button variant="outline" asChild>
           <Link href="/familias">
             <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Famílias
           </Link>
         </Button>
+        <div className="space-x-2">
+            <Button variant="outline" asChild>
+                <Link href={`/familias/${familia.id}/editar`}>
+                    <Edit className="mr-2 h-4 w-4" /> Editar Família
+                </Link>
+            </Button>
+            <DeleteConfirmationButton
+                itemId={familia.id}
+                itemName={familia.f_nome}
+                itemType="Família"
+                deleteAction={deleteFamilia}
+                onSuccess={() => redirect('/familias')}
+                triggerButtonProps={{variant: "destructive"}}
+                triggerIcon={<><Trash2 className="mr-2 h-4 w-4" /> Excluir Família</>}
+            />
+        </div>
       </div>
       
       <Card className="overflow-hidden shadow-xl">
         {familia.f_hero && (
-          <div className="relative w-full h-64 md:h-96">
+          <div className="relative w-full h-64 md:h-96 bg-muted">
             <Image
               src={familia.f_hero}
               alt={`${familia.f_nome} Hero Image`}
@@ -69,9 +87,6 @@ export default async function FamiliaDetailPage({ params }: { params: { id: stri
              <Badge variant="secondary">ID: {familia.id}</Badge>
            </div>
         </CardContent>
-        <CardFooter>
-          <Button variant="outline" disabled>Editar Família (Em breve)</Button>
-        </CardFooter>
       </Card>
     </div>
   );

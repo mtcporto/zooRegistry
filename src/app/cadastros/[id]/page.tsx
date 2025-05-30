@@ -4,17 +4,29 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-function DetailItem({ label, value }: { label: string; value?: string | null | false }) {
-  if (!value) return null;
+function DetailItem({ label, value, isBoolean }: { label: string; value?: string | null | boolean | undefined; isBoolean?: boolean }) {
+  if (value === undefined || value === null || value === '') {
+    if (isBoolean && value === false) {
+        // continue for false boolean
+    } else {
+      return null;
+    }
+  }
+  
+  let displayValue = String(value);
+  if (isBoolean) {
+    displayValue = value ? "Sim" : "Não";
+  }
+
   return (
     <div className="py-2 px-3 odd:bg-secondary/30 even:bg-card rounded-md">
       <span className="font-semibold text-primary">{label}: </span>
-      <span>{value}</span>
+      <span>{displayValue}</span>
     </div>
   );
 }
@@ -59,12 +71,14 @@ export default async function CadastroDetailPage({ params }: { params: { id: str
           <DetailItem label="Nº de Registro" value={cadastro.f_registro} />
           <DetailItem label="Procedência" value={cadastro.f_procedencia} />
           <DetailItem label="Idade na Entrada" value={cadastro.f_idade} />
-          <DetailItem label="Data de Entrada" value={cadastro.f_entrada && format(parseISO(cadastro.f_entrada), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} />
+          <DetailItem label="Data de Entrada" value={cadastro.f_entrada && format(parseISO(cadastro.f_entrada), "dd/MM/yyyy", { locale: ptBR })} />
           <DetailItem label="Sexo" value={cadastro.f_sexo} />
           <DetailItem label="Tipo de Marcação" value={cadastro.f_marcacaotipo} />
           <DetailItem label="Nº da Marcação" value={cadastro.f_marcacaonumero} />
-          <DetailItem label="Data de Saída" value={cadastro.f_saida && format(parseISO(cadastro.f_saida), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} />
+          <DetailItem label="Data de Saída" value={cadastro.f_saida && format(parseISO(cadastro.f_saida), "dd/MM/yyyy", { locale: ptBR })} />
           <DetailItem label="Motivo da Saída" value={cadastro.f_motivosaida} />
+          <DetailItem label="Origem do Tráfico" value={cadastro.f_origem_trafico} isBoolean />
+          <DetailItem label="Informações sobre Tráfico" value={cadastro.f_informacoes_trafico} />
         </CardContent>
         { (cadastro.f_sinais || cadastro.f_observacao) &&
             <CardContent className="border-t pt-4 mt-4">
@@ -83,7 +97,11 @@ export default async function CadastroDetailPage({ params }: { params: { id: str
             </CardContent>
         }
         <CardFooter className="border-t mt-4 pt-4">
-          <Button variant="outline" disabled>Editar Cadastro (Em breve)</Button>
+          <Button variant="outline" asChild>
+            <Link href={`/cadastros/${cadastro.id}/editar`}>
+                <Edit className="mr-2 h-4 w-4" /> Editar Cadastro
+            </Link>
+          </Button>
         </CardFooter>
       </Card>
     </div>

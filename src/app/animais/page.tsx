@@ -52,7 +52,7 @@ export default async function AnimaisPage() {
                 <Button variant="ghost" size="sm" asChild title="Visualizar">
                   <Link href={`/animais/${animal.id}`}><Eye className="mr-1 h-4 w-4" /> Ver</Link>
                 </Button>
-                <Button variant="ghost" size="sm" asChild title="Editar (Em breve)">
+                <Button variant="ghost" size="sm" asChild title="Editar">
                   <Link href={`/animais/${animal.id}/editar`}><Edit className="mr-1 h-4 w-4" /> Editar</Link>
                 </Button>
                  <DeleteConfirmationButton
