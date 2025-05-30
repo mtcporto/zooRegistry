@@ -42,15 +42,38 @@ export async function addFamilia(formData: FormData): Promise<{ success: boolean
     f_nome: nome,
     f_ordemId: ordemId,
     f_descricao: descricao,
-    f_imagem: imagem || `https://placehold.co/300x200?text=${encodeURIComponent(nome)}`,
-    f_hero: hero || `https://placehold.co/800x400?text=${encodeURIComponent(nome)}+Hero`,
+    f_imagem: imagem || `https://placehold.co/300x200.png?text=${encodeURIComponent(nome)}`,
+    f_hero: hero || `https://placehold.co/800x400.png?text=${encodeURIComponent(nome)}+Hero`,
   };
   
-  (newFamilia as any)['data-ai-hint'] = "animal family";
-  (newFamilia as any)['data-ai-hint-hero'] = "nature pattern";
+  (newFamilia as any)['data-ai-hint'] = nome.toLowerCase().split(" ").slice(0,2).join(" ") || "animal group image";
+  (newFamilia as any)['data-ai-hint-hero'] = nome.toLowerCase().split(" ").slice(0,2).join(" ") + " ecosystem" || "nature pattern";
 
   db.familias.push(newFamilia);
   revalidatePath("/familias");
+  revalidatePath(`/ordens/${ordemId}`); // Revalidate ordem page if it shows families
 
   return { success: true, message: "Família adicionada com sucesso!", data: newFamilia };
+}
+
+export async function deleteFamilia(id: string): Promise<{ success: boolean; message: string }> {
+  const familiaIndex = db.familias.findIndex(f => f.id === id);
+  if (familiaIndex === -1) {
+    return { success: false, message: "Família não encontrada." };
+  }
+
+  // Check for dependencies in Animais
+  const hasAnimais = db.animais.some(animal => animal.f_familiaId === id);
+  if (hasAnimais) {
+    return { success: false, message: "Não é possível excluir a família. Existem espécies de animais associadas a ela." };
+  }
+
+  const familiaToDelete = db.familias[familiaIndex];
+  db.familias.splice(familiaIndex, 1);
+  
+  revalidatePath("/familias");
+  revalidatePath(`/familias/${id}`);
+  revalidatePath(`/ordens/${familiaToDelete.f_ordemId}`); // Revalidate relevant ordem page
+  
+  return { success: true, message: "Família excluída com sucesso!" };
 }

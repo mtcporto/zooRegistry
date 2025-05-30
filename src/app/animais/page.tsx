@@ -1,6 +1,6 @@
 
 import { PageHeader } from "@/components/PageHeader";
-import { getAnimais, deleteAnimal } from "@/lib/actions/animalActions"; // Assuming deleteAnimal exists
+import { getAnimais, deleteAnimal } from "@/lib/actions/animalActions"; 
 import type { Animal } from "@/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,7 @@ export default async function AnimaisPage() {
                 <p><Badge variant="outline">Classe:</Badge> {animal.f_classeNome}</p>
                 <p><Badge variant="outline">Ordem:</Badge> {animal.f_ordemNome}</p>
                 <p><Badge variant="outline">Família:</Badge> {animal.f_familiaNome}</p>
+                {animal.f_status_conservacao && <p><Badge variant={animal.f_status_conservacao.includes("Ameaçado") || animal.f_status_conservacao.includes("Perigo") ? "destructive" : "secondary"}>Status:</Badge> {animal.f_status_conservacao}</p>}
                 {animal.f_nomes_alternativos && (
                   <p className="text-xs text-muted-foreground pt-1">
                     Também conhecido como: {animal.f_nomes_alternativos}
@@ -58,8 +59,8 @@ export default async function AnimaisPage() {
                     itemId={animal.id}
                     itemName={animal.f_nome}
                     itemType="Animal (Espécie)"
-                    deleteAction={deleteAnimal} // Placeholder: deleteAnimal needs to be created
-                    triggerButtonProps={{variant: "ghost", size: "sm", title: "Excluir (Em breve)"}}
+                    deleteAction={deleteAnimal} 
+                    triggerButtonProps={{variant: "ghost", size: "sm", title: "Excluir"}}
                     triggerIcon={<><Trash2 className="mr-1 h-4 w-4" /> Excluir</>}
                   />
               </CardFooter>

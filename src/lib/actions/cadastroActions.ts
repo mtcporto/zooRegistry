@@ -28,7 +28,9 @@ export async function getCadastroById(id: string): Promise<CadastroAnimal | unde
 export async function addCadastro(formData: FormData): Promise<{ success: boolean; message: string; data?: CadastroAnimal }> {
   const animalId = formData.get("f_animalId") as string;
   if (!animalId) return { success: false, message: "Animal (espécie) é obrigatório." };
-  if (!await getAnimalById(animalId)) return { success: false, message: "Animal (espécie) selecionado inválido." };
+  
+  const animalExists = await getAnimalById(animalId);
+  if (!animalExists) return { success: false, message: "Animal (espécie) selecionado inválido." };
   
   const newCadastro: CadastroAnimal = {
     id: generateId(),
@@ -45,11 +47,31 @@ export async function addCadastro(formData: FormData): Promise<{ success: boolea
     f_saida: formData.get("f_saida") as string | undefined, // Expect YYYY-MM-DD
     f_motivosaida: formData.get("f_motivosaida") as string | undefined,
     f_observacao: formData.get("f_observacao") as string | undefined,
+    f_origem_trafico: formData.get("f_origem_trafico") === 'true' ? true : formData.get("f_origem_trafico") === 'false' ? false : undefined,
+    f_informacoes_trafico: formData.get("f_informacoes_trafico") as string | undefined,
   };
 
   db.cadastros.push(newCadastro);
   revalidatePath("/cadastros");
+  revalidatePath(`/animais/${animalId}`); // Revalidate animal detail page if it shows individual counts
 
   return { success: true, message: "Cadastro de animal individual adicionado com sucesso!", data: newCadastro };
 }
 
+export async function deleteCadastro(id: string): Promise<{ success: boolean; message: string }> {
+  const cadastroIndex = db.cadastros.findIndex(c => c.id === id);
+  if (cadastroIndex === -1) {
+    return { success: false, message: "Cadastro individual não encontrado." };
+  }
+
+  const cadastroToDelete = db.cadastros[cadastroIndex];
+  db.cadastros.splice(cadastroIndex, 1);
+  
+  revalidatePath("/cadastros");
+  revalidatePath(`/cadastros/${id}`); // In case someone is on the detail page
+  if (cadastroToDelete.f_animalId) {
+    revalidatePath(`/animais/${cadastroToDelete.f_animalId}`); // Revalidate animal detail page
+  }
+  
+  return { success: true, message: "Cadastro individual excluído com sucesso!" };
+}

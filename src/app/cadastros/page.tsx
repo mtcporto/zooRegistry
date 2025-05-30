@@ -1,6 +1,6 @@
 
 import { PageHeader } from "@/components/PageHeader";
-import { getCadastros, deleteCadastro } from "@/lib/actions/cadastroActions"; // Assuming deleteCadastro exists
+import { getCadastros, deleteCadastro } from "@/lib/actions/cadastroActions"; 
 import type { CadastroAnimal } from "@/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,7 @@ export default async function CadastrosPage() {
                 {cadastro.f_entrada && <p><Badge variant="outline">Entrada:</Badge> {format(parseISO(cadastro.f_entrada), "dd/MM/yyyy", { locale: ptBR })}</p>}
                 {cadastro.f_idade && <p><Badge variant="outline">Idade:</Badge> {cadastro.f_idade}</p>}
                 {cadastro.f_marcacaotipo && <p><Badge variant="outline">Marcação:</Badge> {cadastro.f_marcacaotipo} {cadastro.f_marcacaonumero && `(${cadastro.f_marcacaonumero})`}</p>}
+                {cadastro.f_origem_trafico && <Badge variant="destructive" className="mt-1">Origem: Tráfico</Badge>}
               </CardContent>
               <CardFooter className="border-t pt-4 flex justify-between items-center gap-2">
                  <Button variant="ghost" size="sm" asChild title="Visualizar">
@@ -56,8 +57,8 @@ export default async function CadastrosPage() {
                     itemId={cadastro.id}
                     itemName={cadastro.f_apelido || `Registro ${cadastro.f_registro}` || `Animal ${cadastro.id}`}
                     itemType="Cadastro Individual"
-                    deleteAction={deleteCadastro} // Placeholder: deleteCadastro needs to be created
-                    triggerButtonProps={{variant: "ghost", size: "icon", title: "Excluir (Em breve)"}}
+                    deleteAction={deleteCadastro} 
+                    triggerButtonProps={{variant: "ghost", size: "icon", title: "Excluir"}}
                   />
                 </div>
               </CardFooter>

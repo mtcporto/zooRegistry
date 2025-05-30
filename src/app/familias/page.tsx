@@ -1,6 +1,6 @@
 
 import { PageHeader } from "@/components/PageHeader";
-import { getFamilias, deleteFamilia } from "@/lib/actions/familiaActions"; // Assuming deleteFamilia exists
+import { getFamilias, deleteFamilia } from "@/lib/actions/familiaActions"; 
 import {
   Table,
   TableBody,
@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Eye, Edit, Trash2, ShieldHalf } from "lucide-react"; // Using ShieldHalf as placeholder icon
+import { Eye, Edit, Trash2, ShieldHalf } from "lucide-react"; 
 import { DeleteConfirmationButton } from "@/components/DeleteConfirmationButton";
 
 export default async function FamiliasPage() {
@@ -71,9 +71,8 @@ export default async function FamiliasPage() {
                         itemId={familia.id}
                         itemName={familia.f_nome}
                         itemType="Família"
-                        deleteAction={deleteFamilia} // Placeholder: deleteFamilia needs to be created
-                        triggerButtonProps={{variant: "ghost", size: "icon", title: "Excluir (Em breve)"}}
-                        // Add onSuccess if needed for redirect
+                        deleteAction={deleteFamilia} 
+                        triggerButtonProps={{variant: "ghost", size: "icon", title: "Excluir"}}
                       />
                     </TableCell>
                   </TableRow>
