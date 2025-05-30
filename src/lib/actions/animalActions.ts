@@ -4,7 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { db, generateId } from "@/lib/mockDb";
 import type { Animal } from "@/types";
-import { getConservationStatusAndTaxonomy } from "@/ai/flows/get-conservation-status-flow"; 
+import { getConservationStatusAndTaxonomy } from "@/ai/flows/get-conservation-status-flow";
 import { getAnimalImage } from "@/ai/flows/get-animal-image-flow";
 
 export async function getAnimais(): Promise<Animal[]> {
@@ -18,10 +18,14 @@ export async function getAnimalById(id: string): Promise<Animal | undefined> {
 }
 
 export async function addAnimal(formData: FormData): Promise<{ success: boolean; message: string; data?: Animal }> {
+  console.log("[AnimalAction_Add] Called addAnimal.");
+  console.log(`[AnimalAction_Add] Checking PEXELS_API_KEY: ${process.env.PEXELS_API_KEY ? 'FOUND' : 'NOT FOUND'}`);
+  console.log(`[AnimalAction_Add] Checking IUCN_REDLIST_API_TOKEN: ${process.env.IUCN_REDLIST_API_TOKEN ? 'FOUND' : 'NOT FOUND'}`);
+
   const nomeCientifico = formData.get("f_nomecientifico") as string;
   const nomeVulgar = formData.get("f_nome") as string;
   const nomesAlternativos = formData.get("f_nomes_alternativos") as string | undefined;
-  let imagem = formData.get("f_imagem") as string | undefined;
+  const imagemUrlFromForm = formData.get("f_imagem") as string | null; // Can be null if not provided or empty string
   let statusConservacaoUser = formData.get("f_status_conservacao") as string | undefined;
 
   if (!nomeCientifico) return { success: false, message: "Nome científico é obrigatório." };
@@ -32,13 +36,13 @@ export async function addAnimal(formData: FormData): Promise<{ success: boolean;
   };
 
   if (process.env.IUCN_REDLIST_API_TOKEN) {
+    console.log(`[AnimalAction_Add] Attempting to fetch IUCN data for ${nomeCientifico}...`);
     try {
-      console.log(`[AnimalAction_Add] Attempting to fetch IUCN data for ${nomeCientifico}...`);
       iucnData = await getConservationStatusAndTaxonomy({ scientificName: nomeCientifico });
-      if (iucnData.errorMessage && !iucnData.status) { 
-        console.log(`[AnimalAction_Add] IUCN data fetch for ${nomeCientifico}: ${iucnData.errorMessage}`);
+      if (iucnData.errorMessage && !iucnData.status) {
+        console.log(`[AnimalAction_Add] IUCN data fetch for ${nomeCientifico} had a message: ${iucnData.errorMessage}`);
       } else {
-        console.log(`[AnimalAction_Add] IUCN data for ${nomeCientifico} successfully fetched/processed. Status: ${iucnData.status}`);
+        console.log(`[AnimalAction_Add] IUCN data for ${nomeCientifico} successfully fetched/processed. Status: ${iucnData.status}, Class: ${iucnData.className}`);
       }
     } catch (e) {
         console.error(`[AnimalAction_Add] Error fetching IUCN data for ${nomeCientifico}:`, e);
@@ -47,36 +51,48 @@ export async function addAnimal(formData: FormData): Promise<{ success: boolean;
     console.log("[AnimalAction_Add] IUCN_REDLIST_API_TOKEN not set. Skipping IUCN data fetch.");
   }
 
-  const searchTermForImage = nomeCientifico || nomeVulgar;
-  if ((!imagem || imagem.trim() === "") && searchTermForImage && process.env.PEXELS_API_KEY) {
-    try {
+  let finalImageToSave: string | undefined;
+
+  if (imagemUrlFromForm && imagemUrlFromForm.trim() !== "") {
+    finalImageToSave = imagemUrlFromForm.trim();
+    console.log(`[AnimalAction_Add] User provided image URL: ${finalImageToSave}`);
+  } else {
+    console.log(`[AnimalAction_Add] Image URL from form is empty or not provided: "${imagemUrlFromForm}"`);
+    const searchTermForImage = nomeCientifico || nomeVulgar; // Prefer scientific name
+    if (searchTermForImage && process.env.PEXELS_API_KEY) {
       console.log(`[AnimalAction_Add] Attempting to fetch image for "${searchTermForImage}" from Pexels...`);
-      const imageResult = await getAnimalImage({ animalName: searchTermForImage });
-      console.log(`[AnimalAction_Add] Pexels attempt for "${searchTermForImage}": URL=${imageResult.imageUrl}, Error=${imageResult.errorMessage}`);
-      if (imageResult.imageUrl) {
-        imagem = imageResult.imageUrl;
-        console.log(`[AnimalAction_Add] Using Pexels image for ${searchTermForImage}: ${imagem}`);
-      } else {
-        console.log(`[AnimalAction_Add] Pexels did not return an image for ${searchTermForImage}.`);
+      try {
+        const imageResult = await getAnimalImage({ animalName: searchTermForImage });
+        console.log(`[AnimalAction_Add] Pexels result for "${searchTermForImage}": URL=${imageResult.imageUrl}, ErrorMessage=${imageResult.errorMessage}`);
+        if (imageResult.imageUrl) {
+          finalImageToSave = imageResult.imageUrl;
+          console.log(`[AnimalAction_Add] Using Pexels image: ${finalImageToSave}`);
+        } else {
+          console.log(`[AnimalAction_Add] Pexels did not return an image.`);
+        }
+      } catch (e: any) {
+        console.error(`[AnimalAction_Add] Error calling getAnimalImage flow for Pexels:`, e.message);
       }
-    } catch (e) {
-      console.error(`[AnimalAction_Add] Error fetching image from Pexels for "${searchTermForImage}":`, e);
+    } else if (!process.env.PEXELS_API_KEY) {
+        console.log(`[AnimalAction_Add] PEXELS_API_KEY not set. Skipping Pexels search.`);
+    } else {
+        console.log(`[AnimalAction_Add] No search term for Pexels (nomeCientifico and nomeVulgar are empty). Skipping Pexels search.`);
     }
-  } else if (!imagem || imagem.trim() === "") {
-     console.log(`[AnimalAction_Add] No image provided and Pexels API key not set or no search term. Will use placeholder.`);
   }
 
+  if (!finalImageToSave) {
+    finalImageToSave = `https://placehold.co/300x200.png?text=${encodeURIComponent(nomeVulgar)}`;
+    console.log(`[AnimalAction_Add] No image obtained from user or Pexels. Using placeholder: ${finalImageToSave}`);
+  }
 
   const finalStatus = (statusConservacaoUser && statusConservacaoUser.trim() !== "") ? statusConservacaoUser.trim().toUpperCase() : iucnData.status;
-  const finalImage = imagem && imagem.trim() !== "" ? imagem : `https://placehold.co/300x200.png?text=${encodeURIComponent(nomeVulgar)}`;
-  console.log(`[AnimalAction_Add] Final image for ${nomeVulgar}: ${finalImage}`);
 
   const newAnimal: Animal = {
     id: generateId(),
     f_nomecientifico: nomeCientifico,
     f_nome: nomeVulgar,
     f_nomes_alternativos: nomesAlternativos,
-    f_imagem: finalImage,
+    f_imagem: finalImageToSave,
     f_status_conservacao: finalStatus,
     f_iucn_kingdomName: iucnData.kingdomName,
     f_iucn_phylumName: iucnData.phylumName,
@@ -96,10 +112,14 @@ export async function addAnimal(formData: FormData): Promise<{ success: boolean;
 }
 
 export async function updateAnimal(id: string, formData: FormData): Promise<{ success: boolean; message: string; data?: Animal }> {
+  console.log(`[AnimalAction_Update] Called updateAnimal for ID: ${id}.`);
+  console.log(`[AnimalAction_Update] Checking PEXELS_API_KEY: ${process.env.PEXELS_API_KEY ? 'FOUND' : 'NOT FOUND'}`);
+  console.log(`[AnimalAction_Update] Checking IUCN_REDLIST_API_TOKEN: ${process.env.IUCN_REDLIST_API_TOKEN ? 'FOUND' : 'NOT FOUND'}`);
+
   const nomeCientifico = formData.get("f_nomecientifico") as string;
   const nomeVulgar = formData.get("f_nome") as string;
   const nomesAlternativos = formData.get("f_nomes_alternativos") as string | undefined;
-  let imagem = formData.get("f_imagem") as string | undefined; // Image URL from form
+  const imagemUrlFromForm = formData.get("f_imagem") as string | null;
   let statusConservacaoUser = formData.get("f_status_conservacao") as string | undefined;
   const rebuscarIUCN = formData.get("f_rebuscar_iucn") === "true";
 
@@ -122,75 +142,69 @@ export async function updateAnimal(id: string, formData: FormData): Promise<{ su
     commonNames: animalOriginal.f_iucn_commonNames,
   };
 
-  if (rebuscarIUCN && process.env.IUCN_REDLIST_API_TOKEN) {
-     try {
-      console.log(`[AnimalAction_Update] Re-fetching IUCN data for ${nomeCientifico}...`);
-      const fetchedIUCNData = await getConservationStatusAndTaxonomy({ scientificName: nomeCientifico });
-      if (fetchedIUCNData.errorMessage && !fetchedIUCNData.status) {
-         console.log(`[AnimalAction_Update] IUCN data re-fetch for ${nomeCientifico}: ${fetchedIUCNData.errorMessage}`);
-      } else {
-        console.log(`[AnimalAction_Update] IUCN data for ${nomeCientifico} successfully re-fetched. Status: ${fetchedIUCNData.status}`);
-        iucnData = { // Update with newly fetched data
-            status: fetchedIUCNData.status,
-            kingdomName: fetchedIUCNData.kingdomName,
-            phylumName: fetchedIUCNData.phylumName,
-            className: fetchedIUCNData.className,
-            orderName: fetchedIUCNData.orderName,
-            familyName: fetchedIUCNData.familyName,
-            commonNames: fetchedIUCNData.commonNames,
-        };
+  if (rebuscarIUCN || (animalOriginal.f_nomecientifico !== nomeCientifico && !statusConservacaoUser) ) { // Re-fetch if name changed and user didn't set status
+    if (process.env.IUCN_REDLIST_API_TOKEN) {
+      console.log(`[AnimalAction_Update] Re-fetching IUCN data for ${nomeCientifico} (rebuscarIUCN: ${rebuscarIUCN}, nameChanged: ${animalOriginal.f_nomecientifico !== nomeCientifico})...`);
+      try {
+        const fetchedIUCNData = await getConservationStatusAndTaxonomy({ scientificName: nomeCientifico });
+        if (fetchedIUCNData.errorMessage && !fetchedIUCNData.status) {
+           console.log(`[AnimalAction_Update] IUCN data re-fetch for ${nomeCientifico} had a message: ${fetchedIUCNData.errorMessage}`);
+        } else {
+          console.log(`[AnimalAction_Update] IUCN data for ${nomeCientifico} successfully re-fetched. Status: ${fetchedIUCNData.status}, Class: ${fetchedIUCNData.className}`);
+          iucnData = { // Update with newly fetched data
+              status: fetchedIUCNData.status,
+              kingdomName: fetchedIUCNData.kingdomName,
+              phylumName: fetchedIUCNData.phylumName,
+              className: fetchedIUCNData.className,
+              orderName: fetchedIUCNData.orderName,
+              familyName: fetchedIUCNData.familyName,
+              commonNames: fetchedIUCNData.commonNames,
+          };
+        }
+      } catch (e) {
+          console.error(`[AnimalAction_Update] Error re-fetching IUCN data for ${nomeCientifico}:`, e);
       }
-    } catch (e) {
-        console.error(`[AnimalAction_Update] Error re-fetching IUCN data for ${nomeCientifico}:`, e);
+    } else {
+      console.log("[AnimalAction_Update] IUCN_REDLIST_API_TOKEN not set, but re-fetch was requested/needed. Skipping IUCN data fetch.");
     }
-  } else if (rebuscarIUCN) {
-    console.log("[AnimalAction_Update] IUCN_REDLIST_API_TOKEN not set, but re-fetch was requested. Skipping IUCN data fetch.");
   }
 
-  // Image handling logic:
-  // Case 1: User cleared the image field (submitted as empty string).
-  // Case 2: User provided a new image URL.
-  // Case 3: User didn't change the image field (it keeps its original value from form, could be a URL or empty if it was cleared).
-  // If 'imagem' from form is empty/cleared, try Pexels. If Pexels fails, use placeholder.
-  // If 'imagem' from form has a value, use that value.
+
+  let finalImageToSave: string | undefined = animalOriginal.f_imagem; 
+
+  if (typeof imagemUrlFromForm === 'string' && imagemUrlFromForm.trim() === "") {
+    console.log(`[AnimalAction_Update] Image field was explicitly cleared for ${nomeVulgar}.`);
+    const searchTermForImage = nomeCientifico || nomeVulgar; // Prefer scientific name
+    if (searchTermForImage && process.env.PEXELS_API_KEY) {
+        console.log(`[AnimalAction_Update] Attempting to fetch image for "${searchTermForImage}" from Pexels...`);
+        try {
+            const imageResult = await getAnimalImage({ animalName: searchTermForImage });
+            console.log(`[AnimalAction_Update] Pexels result for "${searchTermForImage}": URL=${imageResult.imageUrl}, ErrorMessage=${imageResult.errorMessage}`);
+            if (imageResult.imageUrl) {
+                finalImageToSave = imageResult.imageUrl;
+                console.log(`[AnimalAction_Update] Using Pexels image: ${finalImageToSave}`);
+            } else {
+                finalImageToSave = `https://placehold.co/300x200.png?text=${encodeURIComponent(nomeVulgar)}`;
+                console.log(`[AnimalAction_Update] Pexels did not return an image. Using placeholder.`);
+            }
+        } catch (e: any) {
+            console.error(`[AnimalAction_Update] Error calling getAnimalImage flow for Pexels:`, e.message);
+            finalImageToSave = `https://placehold.co/300x200.png?text=${encodeURIComponent(nomeVulgar)}`;
+        }
+    } else if (!process.env.PEXELS_API_KEY) {
+        finalImageToSave = `https://placehold.co/300x200.png?text=${encodeURIComponent(nomeVulgar)}`;
+        console.log(`[AnimalAction_Update] Image field cleared, PEXELS_API_KEY not set. Using placeholder.`);
+    } else {
+        finalImageToSave = `https://placehold.co/300x200.png?text=${encodeURIComponent(nomeVulgar)}`;
+        console.log(`[AnimalAction_Update] Image field cleared, no search term available. Using placeholder.`);
+    }
+  } else if (imagemUrlFromForm && imagemUrlFromForm.trim() !== "" && imagemUrlFromForm !== animalOriginal.f_imagem) {
+    finalImageToSave = imagemUrlFromForm.trim();
+    console.log(`[AnimalAction_Update] User provided new image URL: ${finalImageToSave}`);
+  } else {
+     console.log(`[AnimalAction_Update] Image URL from form is "${imagemUrlFromForm}". Original was "${animalOriginal.f_imagem}". No change or no new Pexels fetch needed based on form input for image.`);
+  }
   
-  const searchTermForImage = nomeCientifico || nomeVulgar;
-  let finalImage = animalOriginal.f_imagem; // Default to original image
-
-  if (typeof imagem === 'string' && imagem.trim() === "") { // User explicitly cleared the image field or it was empty
-      console.log(`[AnimalAction_Update] Image field was empty for ${nomeVulgar}. Attempting Pexels.`);
-      if (searchTermForImage && process.env.PEXELS_API_KEY) {
-          try {
-              const imageResult = await getAnimalImage({ animalName: searchTermForImage });
-              console.log(`[AnimalAction_Update] Pexels attempt for "${searchTermForImage}": URL=${imageResult.imageUrl}, Error=${imageResult.errorMessage}`);
-              if (imageResult.imageUrl) {
-                  finalImage = imageResult.imageUrl;
-                  console.log(`[AnimalAction_Update] Using Pexels image for ${searchTermForImage}: ${finalImage}`);
-              } else {
-                  finalImage = `https://placehold.co/300x200.png?text=${encodeURIComponent(nomeVulgar)}`;
-                  console.log(`[AnimalAction_Update] Pexels did not return an image for ${searchTermForImage}. Using placeholder: ${finalImage}`);
-              }
-          } catch (e) {
-              console.error(`[AnimalAction_Update] Error fetching image from Pexels for "${searchTermForImage}":`, e);
-              finalImage = `https://placehold.co/300x200.png?text=${encodeURIComponent(nomeVulgar)}`;
-          }
-      } else {
-          finalImage = `https://placehold.co/300x200.png?text=${encodeURIComponent(nomeVulgar)}`;
-          console.log(`[AnimalAction_Update] No Pexels key or search term for empty image field. Using placeholder: ${finalImage}`);
-      }
-  } else if (typeof imagem === 'string' && imagem.trim() !== "") { // User provided a new, non-empty image URL
-      finalImage = imagem;
-      console.log(`[AnimalAction_Update] User provided new image URL for ${nomeVulgar}: ${finalImage}`);
-  }
-  // If 'imagem' from formData was undefined (field not submitted, which is unlikely for text inputs unless disabled),
-  // or if it was not an empty string and not a new non-empty string, 'finalImage' remains 'animalOriginal.f_imagem'.
-  // This case should not happen if the form field is always present.
-  else {
-    console.log(`[AnimalAction_Update] Image field for ${nomeVulgar} was not explicitly cleared nor a new URL provided. Retaining original: ${finalImage}`);
-  }
-  console.log(`[AnimalAction_Update] Final image for ${nomeVulgar}: ${finalImage}`);
-
-
   const finalStatus = (statusConservacaoUser && statusConservacaoUser.trim() !== "") ? statusConservacaoUser.trim().toUpperCase() : iucnData.status;
 
   const updatedAnimal: Animal = {
@@ -198,7 +212,7 @@ export async function updateAnimal(id: string, formData: FormData): Promise<{ su
     f_nomecientifico: nomeCientifico,
     f_nome: nomeVulgar,
     f_nomes_alternativos: nomesAlternativos,
-    f_imagem: finalImage,
+    f_imagem: finalImageToSave,
     f_status_conservacao: finalStatus,
     f_iucn_kingdomName: iucnData.kingdomName,
     f_iucn_phylumName: iucnData.phylumName,
@@ -241,4 +255,3 @@ export async function deleteAnimal(id: string): Promise<{ success: boolean; mess
   
   return { success: true, message: "Animal (espécie) excluído com sucesso!" };
 }
-
