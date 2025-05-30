@@ -1,12 +1,12 @@
 
 import { PageHeader } from "@/components/PageHeader";
-import { getAnimais } from "@/lib/actions/animalActions"; 
+import { getAnimais } from "@/lib/actions/animalActions";
 import type { Animal } from "@/types";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
-import { Eye, Squirrel } from "lucide-react"; 
+import { Eye, Squirrel } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default async function HomePage() {
@@ -26,8 +26,9 @@ export default async function HomePage() {
                 <Image
                   src={animal.f_imagem || "https://placehold.co/400x300.png?text=Sem+Imagem"}
                   alt={animal.f_nome}
-                  layout="fill"
-                  objectFit="cover"
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  className="object-cover"
                   data-ai-hint={ (animal as any)['data-ai-hint'] || animal.f_nome.toLowerCase().split(" ").slice(0,2).join(" ") }
                 />
               </div>

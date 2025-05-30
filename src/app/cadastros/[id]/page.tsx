@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+export const dynamic = 'force-dynamic';
+
 function DetailItem({ label, value, isBoolean }: { label: string; value?: string | null | boolean | undefined; isBoolean?: boolean }) {
   if (value === undefined || value === null || value === '') {
     if (isBoolean && value === false) {
@@ -17,7 +19,7 @@ function DetailItem({ label, value, isBoolean }: { label: string; value?: string
       return null;
     }
   }
-  
+
   let displayValue = String(value);
   if (isBoolean) {
     displayValue = value ? "Sim" : "Não";
@@ -56,7 +58,7 @@ export default async function CadastroDetailPage({ params }: { params: { id: str
           </Link>
         </Button>
       </div>
-      
+
       <Card className="shadow-xl">
         <CardHeader className="bg-primary/10">
           <CardTitle className="text-3xl font-bold text-primary">

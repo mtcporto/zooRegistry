@@ -8,6 +8,8 @@ import Image from "next/image";
 import { ArrowLeft, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
+export const dynamic = 'force-dynamic';
+
 export default async function AnimalDetailPage({ params }: { params: { id: string } }) {
   const animal = await getAnimalById(params.id);
 
@@ -33,15 +35,16 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
           </Link>
         </Button>
       </div>
-      
+
       <Card className="overflow-hidden shadow-xl">
         {animal.f_imagem && (
           <div className="relative w-full h-64 md:h-96 bg-muted">
             <Image
               src={animal.f_imagem}
               alt={`${animal.f_nome} - ${animal.f_nomecientifico}`}
-              layout="fill"
-              objectFit="contain" 
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              className="object-contain"
               data-ai-hint={ (animal as any)['data-ai-hint'] || animal.f_nome.toLowerCase().split(" ").slice(0,2).join(" ") }
             />
           </div>

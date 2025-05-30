@@ -53,14 +53,16 @@ export default async function AnimaisPage() {
                 {animais.map((animal) => (
                   <TableRow key={animal.id}>
                     <TableCell>
-                      <Image
-                        src={animal.f_imagem || "https://placehold.co/100x60.png?text=Sem+Imagem"}
-                        alt={animal.f_nome}
-                        width={100}
-                        height={60}
-                        className="rounded object-cover"
-                        data-ai-hint={ (animal as any)['data-ai-hint'] || animal.f_nome.toLowerCase().split(" ").slice(0,2).join(" ") }
-                      />
+                      <div className="relative w-[100px] h-[60px]">
+                        <Image
+                          src={animal.f_imagem || "https://placehold.co/100x60.png?text=Sem+Imagem"}
+                          alt={animal.f_nome}
+                          fill
+                          sizes="100px"
+                          className="rounded object-cover"
+                          data-ai-hint={ (animal as any)['data-ai-hint'] || animal.f_nome.toLowerCase().split(" ").slice(0,2).join(" ") }
+                        />
+                      </div>
                     </TableCell>
                     <TableCell className="font-medium">{animal.f_nome}</TableCell>
                     <TableCell className="italic">{animal.f_nomecientifico}</TableCell>

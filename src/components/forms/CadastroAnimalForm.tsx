@@ -57,7 +57,7 @@ type CadastroFormValues = z.infer<typeof formSchema>;
 
 interface CadastroAnimalFormProps {
   initialData?: CadastroAnimal | null;
-  animais: Animal[]; 
+  animais: Animal[];
   defaultAnimalId?: string;
 }
 
@@ -105,7 +105,7 @@ export function CadastroAnimalForm({ initialData, animais, defaultAnimalId }: Ca
 
   async function onSubmit(values: CadastroFormValues) {
     const formData = new FormData();
-    
+
     Object.entries(values).forEach(([key, value]) => {
       if (value instanceof Date) {
         formData.append(key, value.toISOString()); // Send full ISO string
@@ -113,7 +113,7 @@ export function CadastroAnimalForm({ initialData, animais, defaultAnimalId }: Ca
         formData.append(key, String(value));
       }
     });
-    
+
     // Ensure boolean is sent correctly
     formData.set("f_origem_trafico", String(values.f_origem_trafico || false));
 
@@ -217,7 +217,7 @@ export function CadastroAnimalForm({ initialData, animais, defaultAnimalId }: Ca
               <FormField control={form.control} name="f_procedencia" render={({ field }) => ( <FormItem> <FormLabel>Procedência</FormLabel> <FormControl><Input placeholder="Ex: Resgate IBAMA" {...field} value={field.value ?? ""} /></FormControl> <FormMessage /> </FormItem> )} />
               <FormField control={form.control} name="f_idade" render={({ field }) => ( <FormItem> <FormLabel>Idade na Entrada</FormLabel> <FormControl><Input placeholder="Ex: 5 anos / Filhote" {...field} value={field.value ?? ""} /></FormControl> <FormMessage /> </FormItem> )} />
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
              <FormField
                 control={form.control}
@@ -353,7 +353,7 @@ export function CadastroAnimalForm({ initialData, animais, defaultAnimalId }: Ca
                 )}
             />
             <FormField control={form.control} name="f_informacoes_trafico" render={({ field }) => ( <FormItem> <FormLabel>Informações sobre Tráfico (Opcional)</FormLabel> <FormControl><Textarea placeholder="Detalhes sobre o resgate, apreensão, etc." {...field} value={field.value ?? ""} rows={3} /></FormControl> <FormMessage /> </FormItem> )} />
-            
+
             <FormField control={form.control} name="f_observacao" render={({ field }) => ( <FormItem> <FormLabel>Observações (Opcional)</FormLabel> <FormControl><Textarea placeholder="Informações adicionais relevantes..." {...field} value={field.value ?? ""} rows={4} /></FormControl> <FormMessage /> </FormItem> )} />
 
             <div className="flex justify-end gap-2 pt-4">

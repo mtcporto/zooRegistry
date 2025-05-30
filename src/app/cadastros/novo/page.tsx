@@ -3,10 +3,13 @@ import { CadastroAnimalForm } from "@/components/forms/CadastroAnimalForm";
 import { PageHeader } from "@/components/PageHeader";
 import { getAnimais } from "@/lib/actions/animalActions"; // Fetch all species
 
+export const dynamic = 'force-dynamic';
+
 export default async function NovoCadastroPage({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined }}) {
   const animais = await getAnimais();
-  const defaultAnimalId = typeof searchParams?.animalId === 'string' ? searchParams.animalId : undefined;
-  const animalNome = typeof searchParams?.animalNome === 'string' ? decodeURIComponent(searchParams.animalNome) : undefined;
+  // Access searchParams directly as Next.js makes them available in async components
+  const defaultAnimalId = searchParams?.animalId as string | undefined;
+  const animalNome = searchParams?.animalNome ? decodeURIComponent(searchParams.animalNome as string) : undefined;
 
   return (
     <div className="container mx-auto p-4 md:p-8">
