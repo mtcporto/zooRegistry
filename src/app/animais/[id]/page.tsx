@@ -8,7 +8,7 @@ import Image from "next/image";
 import { ArrowLeft, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'; // Ensure dynamic rendering for params access
 
 export default async function AnimalDetailPage({ params }: { params: { id: string } }) {
   const animal = await getAnimalById(params.id);
@@ -26,9 +26,12 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
     );
   }
 
-  const imageUrl = animal.f_imagem || `https://placehold.co/600x400.png?text=${encodeURIComponent(animal.f_nome)}`;
+  // Use animal.f_imagem if available, otherwise use a placeholder
+  const imageUrl = animal.f_imagem || `https://placehold.co/600x400.png?text=${encodeURIComponent(animal.f_nome || 'Animal')}`;
   const imageAlt = `${animal.f_nome} - ${animal.f_nomecientifico}`;
-  const imageHint = (animal as any)['data-ai-hint'] || animal.f_nome.toLowerCase().split(" ").slice(0,2).join(" ");
+  // Construct data-ai-hint from f_nome, ensuring it's a string and taking first two words
+  const nameParts = (animal.f_nome || 'animal').toLowerCase().split(" ");
+  const imageHint = nameParts.slice(0, 2).join(" ");
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -47,7 +50,7 @@ export default async function AnimalDetailPage({ params }: { params: { id: strin
             alt={imageAlt}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            className="object-contain"
+            className="object-contain" // Changed from object-cover to object-contain for better visibility
             data-ai-hint={imageHint}
           />
         </div>

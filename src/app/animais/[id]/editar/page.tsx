@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
+export const dynamic = 'force-dynamic'; // Ensure dynamic rendering for params access
+
 export default async function EditarAnimalPage({ params }: { params: { id: string } }) {
   const animal = await getAnimalById(params.id);
   // Não precisa mais de Promise.all para classes, ordens, familias
