@@ -38,14 +38,14 @@ export default async function HomePage() {
                 <CardDescription className="italic">{animal.f_nomecientifico}</CardDescription>
               </CardHeader>
               <CardContent className="flex-grow space-y-1 text-sm">
-                <p><Badge variant="outline">Classe:</Badge> {animal.f_classeNome}</p>
-                <p><Badge variant="outline">Ordem:</Badge> {animal.f_ordemNome}</p>
-                <p><Badge variant="outline">Família:</Badge> {animal.f_familiaNome}</p>
-                {animal.f_status_conservacao && <p><Badge variant={animal.f_status_conservacao.includes("Ameaçado") || animal.f_status_conservacao.includes("Perigo") ? "destructive" : "secondary"}>Status:</Badge> {animal.f_status_conservacao}</p>}
+                <div><Badge variant="outline">Classe:</Badge> {animal.f_classeNome}</div>
+                <div><Badge variant="outline">Ordem:</Badge> {animal.f_ordemNome}</div>
+                <div><Badge variant="outline">Família:</Badge> {animal.f_familiaNome}</div>
+                {animal.f_status_conservacao && <div><Badge variant={animal.f_status_conservacao.includes("Ameaçado") || animal.f_status_conservacao.includes("Perigo") ? "destructive" : "secondary"}>Status:</Badge> {animal.f_status_conservacao}</div>}
                 {animal.f_nomes_alternativos && (
-                  <p className="text-xs text-muted-foreground pt-1">
+                  <div className="text-xs text-muted-foreground pt-1">
                     Também conhecido como: {animal.f_nomes_alternativos}
-                  </p>
+                  </div>
                 )}
               </CardContent>
               <CardFooter className="border-t pt-4 flex justify-end gap-2">
