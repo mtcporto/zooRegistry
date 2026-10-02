@@ -8,8 +8,7 @@
  * - GetIUCNDataOutput - The return type for the function.
  */
 
-import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 
 const GetIUCNDataInputSchema = z.object({
   scientificName: z.string().describe('The scientific name of the species to look up (e.g., "Panthera leo").'),
@@ -33,16 +32,11 @@ const GetIUCNDataOutputSchema = z.object({
 export type GetIUCNDataOutput = z.infer<typeof GetIUCNDataOutputSchema>;
 
 export async function getConservationStatusAndTaxonomy(input: GetIUCNDataInput): Promise<GetIUCNDataOutput> {
-  return getIUCNDataFlow(input);
+  return GetIUCNDataOutputSchema.parse(await getIUCNDataFlow(input));
 }
 
-const getIUCNDataFlow = ai.defineFlow(
-  {
-    name: 'getIUCNDataFlow',
-    inputSchema: GetIUCNDataInputSchema,
-    outputSchema: GetIUCNDataOutputSchema,
-  },
-  async (input) => {
+async function getIUCNDataFlow(rawInput: GetIUCNDataInput): Promise<GetIUCNDataOutput> {
+  const input = GetIUCNDataInputSchema.parse(rawInput);
     const apiKey = process.env.IUCN_REDLIST_API_TOKEN;
 
     if (!apiKey) {
@@ -191,5 +185,4 @@ const getIUCNDataFlow = ai.defineFlow(
         errorMessage: message 
       };
     }
-  }
-);
+}
