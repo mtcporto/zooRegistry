@@ -17,10 +17,10 @@ export interface Animal {
 }
 
 export type SexoAnimal = 'Macho' | 'Femea' | 'Indefinido';
-export const sexosAnimais: SexoAnimal[] = ['Macho', 'Femea', 'Indefinido'];
+export const sexosAnimais = ['Macho', 'Femea', 'Indefinido'] as const satisfies readonly SexoAnimal[];
 
 export type MarcacaoTipoAnimal = 'Microchip' | 'Microchip / Tatuagem CN01' | 'MC' | 'Anilha CETAS' | 'Anilha TE PZBAC' | 'Sem marcação';
-export const marcacaoTiposAnimais: MarcacaoTipoAnimal[] = ['Microchip', 'Microchip / Tatuagem CN01', 'MC', 'Anilha CETAS', 'Anilha TE PZBAC', 'Sem marcação'];
+export const marcacaoTiposAnimais = ['Microchip', 'Microchip / Tatuagem CN01', 'MC', 'Anilha CETAS', 'Anilha TE PZBAC', 'Sem marcação'] as const satisfies readonly MarcacaoTipoAnimal[];
 
 export interface CadastroAnimal {
   id: string;

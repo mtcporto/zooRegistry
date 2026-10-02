@@ -13,11 +13,7 @@ export const dynamic = 'force-dynamic';
 
 function DetailItem({ label, value, isBoolean }: { label: string; value?: string | null | boolean | undefined; isBoolean?: boolean }) {
   if (value === undefined || value === null || value === '') {
-    if (isBoolean && value === false) {
-        // continue for false boolean
-    } else {
-      return null;
-    }
+    return null;
   }
 
   let displayValue = String(value);
@@ -33,8 +29,8 @@ function DetailItem({ label, value, isBoolean }: { label: string; value?: string
   );
 }
 
-export default async function CadastroDetailPage({ params }: { params: { id: string } }) {
-  const cadastro = await getCadastroById(params.id);
+export default async function CadastroDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const cadastro = await getCadastroById((await params).id);
 
   if (!cadastro) {
     return (

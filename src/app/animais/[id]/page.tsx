@@ -11,13 +11,13 @@ import { Badge } from "@/components/ui/badge";
 export const dynamic = 'force-dynamic';
 
 interface AnimalDetailPageProps {
-  params: { id: string };
-  searchParams?: { [key: string]: string | string[] | undefined };
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 export default async function AnimalDetailPage({ params, searchParams }: AnimalDetailPageProps) {
-  const animal = await getAnimalById(params.id);
-  const isPublicView = searchParams?.view === 'public';
+  const animal = await getAnimalById((await params).id);
+  const isPublicView = (await searchParams)?.view === 'public';
 
   if (!animal) {
     return (
