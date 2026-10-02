@@ -8,8 +8,7 @@
  * - GetAnimalImageOutput - The return type for the getAnimalImage function.
  */
 
-import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 
 const GetAnimalImageInputSchema = z.object({
   animalName: z.string().describe('The common name or scientific name of the animal to search for (e.g., "Lion", "Panthera leo").'),
@@ -24,16 +23,11 @@ export type GetAnimalImageOutput = z.infer<typeof GetAnimalImageOutputSchema>;
 
 export async function getAnimalImage(input: GetAnimalImageInput): Promise<GetAnimalImageOutput> {
   console.log('[PEXELS_FLOW_ENTRY] getAnimalImage called with input:', JSON.stringify(input));
-  return getAnimalImageFlow(input);
+  return GetAnimalImageOutputSchema.parse(await getAnimalImageFlow(input));
 }
 
-const getAnimalImageFlow = ai.defineFlow(
-  {
-    name: 'getAnimalImageFlow',
-    inputSchema: GetAnimalImageInputSchema,
-    outputSchema: GetAnimalImageOutputSchema,
-  },
-  async (input) => {
+async function getAnimalImageFlow(rawInput: GetAnimalImageInput): Promise<GetAnimalImageOutput> {
+  const input = GetAnimalImageInputSchema.parse(rawInput);
     console.log(`[PEXELS_FLOW] Flow started for animalName: "${input.animalName}"`);
     const apiKey = process.env.PEXELS_API_KEY;
 
@@ -95,5 +89,4 @@ const getAnimalImageFlow = ai.defineFlow(
       console.error(`[PEXELS_FLOW] Error fetching image from Pexels for ${input.animalName}:`, error);
       return { imageUrl: null, errorMessage: message };
     }
-  }
-);
+}
