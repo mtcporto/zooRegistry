@@ -1,7 +1,7 @@
 
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getAnalytics, type Analytics } from 'firebase/analytics';
-import { getFirestore, initializeFirestore, memoryLocalCache } from 'firebase/firestore'; // Added Firestore imports
+import { getFirestore, initializeFirestore, memoryLocalCache, type Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -15,7 +15,7 @@ const firebaseConfig = {
 
 let app: FirebaseApp;
 let analytics: Analytics | undefined;
-let db; // Firestore instance
+let db: Firestore;
 
 // Evita a reinicialização do Firebase no HMR do Next.js
 if (getApps().length === 0) {

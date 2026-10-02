@@ -9,9 +9,9 @@ import { ArrowLeft } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
-export default async function EditarCadastroPage({ params }: { params: { id: string } }) {
+export default async function EditarCadastroPage({ params }: { params: Promise<{ id: string }> }) {
   const [cadastro, animais] = await Promise.all([
-    getCadastroById(params.id),
+    getCadastroById((await params).id),
     getAnimais() // Fetch all species for the dropdown
   ]);
 

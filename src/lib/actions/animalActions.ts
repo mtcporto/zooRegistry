@@ -181,7 +181,7 @@ export async function updateAnimal(id: string, formData: FormData): Promise<{ su
     }
     const animalOriginal = animalOriginalSnap.data() as Animal;
 
-    let iucnDataResult: Partial<GetIUCNDataOutput> = {
+    let iucnDataResult: Partial<Omit<GetIUCNDataOutput, "status">> & { status?: string | null } = {
       status: animalOriginal.f_status_conservacao || null,
       kingdomName: animalOriginal.f_iucn_kingdomName || null,
       phylumName: animalOriginal.f_iucn_phylumName || null,
@@ -295,7 +295,7 @@ export async function updateAnimal(id: string, formData: FormData): Promise<{ su
      if (error.code === 'permission-denied' || error.message?.includes('permission-denied') || error.message?.includes('insufficient permissions')) {
         console.error(`[FIRESTORE_ERROR:updateAnimal] PERMISSION DENIED for document '${id}'. Check Firestore security rules.`);
     } else if (error.code === 'invalid-argument' || error.message?.includes('invalid-argument')) {
-        console.error(`[FIRESTORE_ERROR:updateAnimal] INVALID ARGUMENT. Often due to undefined field values. Data being sent:`, JSON.stringify(updatedAnimalData, (key, value) => value === undefined ? null : value, 2));
+        console.error(`[FIRESTORE_ERROR:updateAnimal] INVALID ARGUMENT. Check field values in the update request.`);
     }
     return { success: false, message: `Erro ao atualizar animal (espécie) no Firestore: ${error.message}` };
   }

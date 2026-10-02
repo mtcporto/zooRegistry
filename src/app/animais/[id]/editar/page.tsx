@@ -9,8 +9,8 @@ import { ArrowLeft } from "lucide-react";
 
 export const dynamic = 'force-dynamic'; // Ensure dynamic rendering for params access
 
-export default async function EditarAnimalPage({ params }: { params: { id: string } }) {
-  const animal = await getAnimalById(params.id);
+export default async function EditarAnimalPage({ params }: { params: Promise<{ id: string }> }) {
+  const animal = await getAnimalById((await params).id);
   // Não precisa mais de Promise.all para classes, ordens, familias
 
   if (!animal) {

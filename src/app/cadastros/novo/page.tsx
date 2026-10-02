@@ -5,11 +5,11 @@ import { getAnimais } from "@/lib/actions/animalActions"; // Fetch all species
 
 export const dynamic = 'force-dynamic';
 
-export default async function NovoCadastroPage({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined }}) {
+export default async function NovoCadastroPage({ searchParams }: { searchParams?: Promise<{ [key: string]: string | string[] | undefined }>}) {
   const animais = await getAnimais();
-  // Access searchParams directly as Next.js makes them available in async components
-  const defaultAnimalId = searchParams?.animalId as string | undefined;
-  const animalNome = searchParams?.animalNome ? decodeURIComponent(searchParams.animalNome as string) : undefined;
+  // Next.js provides search parameters asynchronously.
+  const defaultAnimalId = (await searchParams)?.animalId as string | undefined;
+  const animalNome = (await searchParams)?.animalNome ? decodeURIComponent((await searchParams)!.animalNome as string) : undefined;
 
   return (
     <div className="container mx-auto p-4 md:p-8">

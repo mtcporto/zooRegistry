@@ -247,7 +247,7 @@ export function CadastroAnimalForm({ initialData, animais, defaultAnimalId }: Ca
                       <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                           mode="single"
-                          selected={field.value}
+                          selected={field.value ?? undefined}
                           onSelect={field.onChange}
                           disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                           initialFocus
@@ -320,7 +320,7 @@ export function CadastroAnimalForm({ initialData, animais, defaultAnimalId }: Ca
                         </FormControl>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} locale={ptBR} />
+                        <Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} locale={ptBR} />
                       </PopoverContent>
                     </Popover>
                     <FormMessage />
