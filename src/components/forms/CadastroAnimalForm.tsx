@@ -3,7 +3,8 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import type { z } from "zod";
+import { cadastroFormSchema as formSchema } from "@/lib/animal-form-schemas";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import React from "react"; // Added this import
@@ -35,25 +36,7 @@ import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
-const formSchema = z.object({
-  f_animalId: z.string({ required_error: "Selecione a espécie do animal." }),
-  f_apelido: z.string().max(100).optional().nullable(),
-  f_registro: z.string().max(50).optional().nullable(),
-  f_procedencia: z.string().max(200).optional().nullable(),
-  f_entrada: z.date().optional().nullable(),
-  f_sexo: z.enum(sexosAnimais).optional().nullable(),
-  f_idade: z.string().max(50).optional().nullable(),
-  f_sinais: z.string().max(500).optional().nullable(),
-  f_marcacaotipo: z.enum(marcacaoTiposAnimais).optional().nullable(),
-  f_marcacaonumero: z.string().max(50).optional().nullable(),
-  f_saida: z.date().optional().nullable(),
-  f_motivosaida: z.string().max(500).optional().nullable(),
-  f_observacao: z.string().max(1000).optional().nullable(),
-  f_origem_trafico: z.boolean().optional().default(false),
-  f_informacoes_trafico: z.string().max(500).optional().nullable(),
-});
-
-type CadastroFormValues = z.infer<typeof formSchema>;
+type CadastroFormValues = z.output<typeof formSchema>;
 
 interface CadastroAnimalFormProps {
   initialData?: CadastroAnimal | null;
@@ -66,7 +49,7 @@ export function CadastroAnimalForm({ initialData, animais, defaultAnimalId }: Ca
   const { toast } = useToast();
   const [animalSelectOpen, setAnimalSelectOpen] = React.useState(false);
 
-  const form = useForm<CadastroFormValues>({
+  const form = useForm<z.input<typeof formSchema>, unknown, CadastroFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData ? {
         ...initialData,

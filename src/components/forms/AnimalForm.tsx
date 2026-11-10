@@ -3,7 +3,8 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import type { z } from "zod";
+import { animalFormSchema as formSchema } from "@/lib/animal-form-schemas";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
@@ -26,16 +27,7 @@ import type { Animal } from "@/types"; // Classe, Ordem, Familia removidos
 import { addAnimal, updateAnimal } from "@/lib/actions/animalActions";
 import { SubmitButton } from "./SubmitButton";
 
-const formSchema = z.object({
-  f_nomecientifico: z.string().min(2, { message: "Nome científico deve ter pelo menos 2 caracteres." }).max(100),
-  f_nome: z.string().min(2, { message: "Nome vulgar deve ter pelo menos 2 caracteres." }).max(100),
-  // f_classeId, f_ordemId, f_familiaId removidos
-  f_nomes_alternativos: z.string().max(200).optional().nullable(),
-  f_imagem: z.string().url({ message: "Por favor, insira uma URL válida para a imagem." }).optional().or(z.literal('')).nullable(),
-  f_status_conservacao: z.string().max(100).optional().nullable(), // Usuário pode sobrescrever status da IUCN
-});
-
-type AnimalFormValues = z.infer<typeof formSchema>;
+type AnimalFormValues = z.output<typeof formSchema>;
 
 interface AnimalFormProps {
   initialData?: Animal | null;
@@ -46,7 +38,7 @@ export function AnimalForm({ initialData }: AnimalFormProps) {
   const router = useRouter();
   const { toast } = useToast();
 
-  const form = useForm<AnimalFormValues>({
+  const form = useForm<z.input<typeof formSchema>, unknown, AnimalFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: initialData ? {
         f_nomecientifico: initialData.f_nomecientifico || "",
